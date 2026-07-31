@@ -39,6 +39,12 @@ export async function POST(request: Request) {
       paidAt: readIsoDate(body, "paid_at"),
       rawWebhookPayload: payload,
     });
+    logWebhookProcessed({
+      order_nsu: order.order_nsu,
+      response_status: 200,
+      item_count: Array.isArray(body.items) ? body.items.length : 0,
+      total_cents: paidAmountCents,
+    });
     return Response.json({ ok: true, matched: true, paid: true, duplicate: event.duplicate });
   } catch (error) {
     debugError("[InfinitePay webhook] erro", error);
@@ -73,4 +79,13 @@ function safeHttpsUrl(value?: string) {
 
 function debugError(message: string, details: unknown) {
   if (process.env.INFINITEPAY_DEBUG === "true") console.error(message, details);
+}
+
+function logWebhookProcessed(details: {
+  order_nsu: string;
+  response_status: number;
+  item_count: number;
+  total_cents: number;
+}) {
+  console.info("[InfinitePay webhook] processado", details);
 }

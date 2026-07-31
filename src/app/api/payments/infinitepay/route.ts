@@ -128,7 +128,7 @@ export async function POST(request: Request) {
       },
       totalCents,
     });
-    debugInfo("9. paymentUrl recebida", { paymentUrl });
+    debugInfo("9. URL de pagamento recebida");
 
     stage = "supabase";
     await updateOrderPaymentUrl(savedOrder.id, paymentUrl);
@@ -145,7 +145,7 @@ export async function POST(request: Request) {
     if (error instanceof InvalidCheckoutError) {
       return errorResponse("validation_error", error.message, 400, error);
     }
-    debugError("[InfinitePay] falha ao criar checkout", error);
+    debugError("[InfinitePay] falha ao criar checkout", safeErrorForLog(error));
     if (error instanceof InfinitePayError || stage === "infinitepay") {
       return errorResponse(
         "infinitepay_error",
@@ -213,6 +213,12 @@ function safeErrorForStorage(error: unknown) {
   if (error instanceof InfinitePayError) return { ...serializeError(error), status: error.status, response: error.responseBody };
   if (error instanceof Error) return serializeError(error);
   return { message: String(error) };
+}
+
+function safeErrorForLog(error: unknown) {
+  if (error instanceof InfinitePayError) return { name: error.name, message: error.message, status: error.status };
+  if (error instanceof Error) return { name: error.name, message: error.message };
+  return { name: "UnknownError" };
 }
 
 type CheckoutErrorCode = "supabase_error" | "infinitepay_error" | "validation_error" | "internal_checkout_error";

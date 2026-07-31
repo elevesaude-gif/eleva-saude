@@ -162,7 +162,8 @@ export async function markOrderAsPaid(input: {
   paidAt?: string;
   rawWebhookPayload: unknown;
 }) {
-  const { error } = await getSupabaseServerClient()
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase
     .from("orders")
     .update({
       payment_status: "paid",
@@ -175,6 +176,13 @@ export async function markOrderAsPaid(input: {
     })
     .eq("id", input.orderId);
   if (error) throwSupabaseError(error);
+
+  const { error: fulfillmentError } = await supabase
+    .from("orders")
+    .update({ fulfillment_status: "paid_not_fulfilled" })
+    .eq("id", input.orderId)
+    .in("fulfillment_status", ["pending", "awaiting_payment"]);
+  if (fulfillmentError) throwSupabaseError(fulfillmentError);
 }
 
 export async function recordPaymentEvent(input: {

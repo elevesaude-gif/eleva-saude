@@ -97,10 +97,17 @@ export async function createInfinitePayCheckout({
 
   const responseText = await response.text();
   const data = parseResponseBody(responseText);
-  debugInfo("[InfinitePay] status e resposta", { status: response.status, response: data });
+  logCheckoutResult({
+    order_nsu: orderNsu,
+    response_status: response.status,
+    item_count: items.length,
+    total_cents: totalCents,
+    webhook_url_present: payload.webhook_url ? "sim" : "não",
+  });
+  debugInfo("[InfinitePay] resposta recebida", { status: response.status });
 
   if (!response.ok) {
-    debugError("[InfinitePay] corpo da resposta de erro", data);
+    debugError("[InfinitePay] resposta de erro", { status: response.status });
     throw new InfinitePayError(
       getInfinitePayErrorMessage(data) ?? "InfinitePay recusou a criação do checkout.",
       response.status,
@@ -185,4 +192,14 @@ function debugError(message: string, details: unknown) {
 
 function debugInfo(message: string, details: unknown) {
   if (process.env.INFINITEPAY_DEBUG === "true") console.info(message, details);
+}
+
+function logCheckoutResult(details: {
+  order_nsu: string;
+  response_status: number;
+  item_count: number;
+  total_cents: number;
+  webhook_url_present: "sim" | "não";
+}) {
+  console.info("[InfinitePay] checkout", details);
 }

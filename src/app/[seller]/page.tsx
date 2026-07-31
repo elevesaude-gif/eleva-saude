@@ -14,11 +14,12 @@ export default async function SellerPage({
   searchParams,
 }: {
   params: Promise<{ seller: string }>;
-  searchParams: Promise<{ teste?: string | string[] }>;
+  searchParams: Promise<{ teste?: string | string[]; token?: string | string[] }>;
 }) {
   const { seller } = await params;
   const query = await searchParams;
-  const testMode = query.teste === "1";
+  const testProductToken = process.env.TEST_PRODUCT_TOKEN;
+  const testMode = Boolean(testProductToken) && query.teste === "1" && query.token === testProductToken;
 
   if (!validSellers.includes(seller as SellerSlug)) {
     return (
