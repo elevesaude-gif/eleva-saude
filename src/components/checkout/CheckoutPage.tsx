@@ -59,6 +59,8 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
         }),
       });
       const data: unknown = await response.json().catch(() => null);
+      console.log("[InfinitePay] status HTTP", response.status);
+      console.log("[InfinitePay] resposta completa do endpoint", data);
       if (!response.ok || !isPaymentResponse(data)) {
         console.error("[InfinitePay] erro ao criar pagamento", {
           httpStatus: response.status,
@@ -66,6 +68,7 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
         });
         throw new Error("Pagamento indisponível.");
       }
+      console.log("[InfinitePay] paymentUrl recebida antes do redirect", data.paymentUrl);
       window.location.assign(data.paymentUrl);
     } catch (error) {
       console.error("[InfinitePay] falha técnica no checkout", error);
@@ -171,13 +174,16 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
   );
 }
 
-function isPaymentResponse(value: unknown): value is { orderNsu: string; paymentUrl: string } {
+function isPaymentResponse(value: unknown): value is { ok: true; orderNsu: string; paymentUrl: string } {
   return Boolean(
     value &&
     typeof value === "object" &&
+    "ok" in value &&
     "orderNsu" in value &&
     "paymentUrl" in value &&
+    value.ok === true &&
     typeof value.orderNsu === "string" &&
-    typeof value.paymentUrl === "string"
+    typeof value.paymentUrl === "string" &&
+    value.paymentUrl.startsWith("https://checkout.infinitepay.io/")
   );
 }

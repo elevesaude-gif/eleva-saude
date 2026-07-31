@@ -1,5 +1,4 @@
 const INFINITEPAY_LINKS_ENDPOINT = "https://api.checkout.infinitepay.io/links";
-export const INFINITEPAY_HANDLE = "eleve-saude";
 
 export type InfinitePayItem = {
   quantity: number;
@@ -21,8 +20,7 @@ export type InfinitePayCustomer = {
 type CreateInfinitePayCheckoutInput = {
   orderNsu: string;
   items: InfinitePayItem[];
-  customer: InfinitePayCustomer;
-  seller: string;
+  customer?: InfinitePayCustomer;
   totalCents: number;
 };
 
@@ -41,14 +39,11 @@ export async function createInfinitePayCheckout({
   orderNsu,
   items,
   customer,
-  seller,
   totalCents,
 }: CreateInfinitePayCheckoutInput): Promise<string> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, "");
 
-  if (!seller.trim()) {
-    throw new InfinitePayError("Configuração da InfinitePay incompleta.", 500);
-  }
+  const handle = getInfinitePayHandle();
 
   const calculatedTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   if (
@@ -61,23 +56,23 @@ export async function createInfinitePayCheckout({
 
   const redirectUrl = appUrl && !isLocalUrl(appUrl) ? `${appUrl}/pedido/sucesso` : undefined;
   const payload = {
-    handle: INFINITEPAY_HANDLE,
+    handle,
     order_nsu: orderNsu,
-    customer: {
+    ...(customer ? { customer: {
       name: customer.name,
       email: customer.email,
       phone_number: customer.phoneNumber,
-    },
-    address: {
+    }, address: {
       cep: customer.address.zipCode,
       number: customer.address.number,
       ...(customer.address.complement ? { complement: customer.address.complement } : {}),
-    },
+    } } : {}),
     items,
     ...(redirectUrl ? { redirect_url: redirectUrl } : {}),
   };
 
-  debugInfo("[InfinitePay] payload", sanitizePayloadForLog(payload));
+  console.info("[InfinitePay] handle usado", handle);
+  console.info("[InfinitePay] payload final enviado", sanitizePayloadForLog(payload));
 
   let response: Response;
   try {
@@ -92,9 +87,9 @@ export async function createInfinitePayCheckout({
     throw error;
   }
 
-  debugInfo("[InfinitePay] status HTTP", response.status);
   const responseText = await response.text();
   const data = parseResponseBody(responseText);
+  console.info("[InfinitePay] status e resposta", { status: response.status, response: data });
 
   if (!response.ok) {
     debugError("[InfinitePay] corpo da resposta de erro", data);
@@ -115,6 +110,12 @@ export async function createInfinitePayCheckout({
   }
 
   return paymentUrl.toString();
+}
+
+export function getInfinitePayHandle(): string {
+  const handle = process.env.INFINITEPAY_HANDLE?.trim();
+  if (!handle) throw new InfinitePayError("INFINITEPAY_HANDLE não configurado", 500);
+  return handle;
 }
 
 function isCheckoutResponse(value: unknown): value is { url: string } {
@@ -152,24 +153,24 @@ function isLocalUrl(value: string) {
 function sanitizePayloadForLog(payload: {
   handle: string;
   order_nsu: string;
-  customer: { name: string; email: string; phone_number: string };
-  address: { cep: string; number: string; complement?: string };
+  customer?: { name: string; email: string; phone_number: string };
+  address?: { cep: string; number: string; complement?: string };
   items: InfinitePayItem[];
   redirect_url?: string;
 }) {
   return {
     ...payload,
     handle: maskValue(payload.handle, 3),
-    customer: {
+    ...(payload.customer ? { customer: {
       name: payload.customer.name,
       email: maskEmail(payload.customer.email),
       phone_number: maskValue(payload.customer.phone_number, 4),
-    },
-    address: {
+    } } : {}),
+    ...(payload.address ? { address: {
       cep: maskValue(payload.address.cep, 3),
       number: "***",
       ...(payload.address.complement ? { complement: "***" } : {}),
-    },
+    } } : {}),
   };
 }
 
@@ -199,10 +200,6 @@ function getFetchErrorDetails(error: unknown) {
     message: String(error),
     cause: undefined,
   };
-}
-
-function debugInfo(message: string, details: unknown) {
-  if (process.env.INFINITEPAY_DEBUG === "true") console.info(message, details);
 }
 
 function debugError(message: string, details: unknown) {

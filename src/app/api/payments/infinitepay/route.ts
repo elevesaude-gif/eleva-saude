@@ -1,6 +1,6 @@
 import {
   createInfinitePayCheckout,
-  INFINITEPAY_HANDLE,
+  getInfinitePayHandle,
   InfinitePayError,
   type InfinitePayItem,
 } from "@/lib/infinitepay";
@@ -20,14 +20,17 @@ type CheckoutRequest = {
 };
 
 export async function POST(request: Request) {
-  debugInfo("[InfinitePay] InfiniteTag:", INFINITEPAY_HANDLE);
-  debugInfo("[InfinitePay] NEXT_PUBLIC_APP_URL existe:", Boolean(process.env.NEXT_PUBLIC_APP_URL?.trim()));
-
   try {
     const input: unknown = await request.json();
+    console.info("[InfinitePay] body recebido", sanitizeCheckoutRequest(input));
     if (!isCheckoutRequest(input)) {
-      return Response.json({ error: "Dados do pedido inválidos." }, { status: 400 });
+      return Response.json({ error: "invalid_checkout_request", message: "Dados do pedido inválidos." }, { status: 400 });
     }
+
+    console.info("[InfinitePay] produtos recebidos", input.items);
+    console.info("[InfinitePay] frete recebido", input.shippingId);
+    console.info("[InfinitePay] customer recebido", sanitizeCustomer(input.customer));
+    console.info("[InfinitePay] handle usado", getInfinitePayHandle());
 
     const canonicalLines = input.items.map((requestedItem) => {
       const product = products.find((candidate) => candidate.id === requestedItem.id);
@@ -49,6 +52,8 @@ export async function POST(request: Request) {
     const discountCents = couponIsValid ? Math.round(subtotalCents * 0.1) : 0;
     const shippingCents = Math.round(shipping.price * 100);
     const totalCents = subtotalCents - discountCents + shippingCents;
+    console.info("[InfinitePay] subtotal calculado", subtotalCents);
+    console.info("[InfinitePay] total calculado", totalCents);
 
     if (input.totalCents !== totalCents) {
       throw new InvalidCheckoutError("O total do pedido mudou. Revise o pedido e tente novamente.");
@@ -72,11 +77,10 @@ export async function POST(request: Request) {
           complement: input.customer.complement.trim() || undefined,
         },
       },
-      seller: input.seller,
       totalCents,
     });
 
-    return Response.json({ orderNsu, paymentUrl });
+    return Response.json({ ok: true, orderNsu, paymentUrl });
   } catch (error) {
     if (error instanceof InvalidCheckoutError) {
       return Response.json({ error: error.message }, { status: 400 });
@@ -88,9 +92,9 @@ export async function POST(request: Request) {
       });
       return Response.json(
         {
-          error: "infinitepay_error",
+          error: "internal_checkout_error",
           message: sanitizeErrorMessage(error.message),
-          status: error.status,
+          detail: developmentDetail(error),
         },
         { status: normalizeHttpStatus(error.status) },
       );
@@ -98,13 +102,39 @@ export async function POST(request: Request) {
     debugError("[InfinitePay] erro inesperado", error);
     return Response.json(
       {
-        error: "infinitepay_error",
-        message: "Não foi possível comunicar com a InfinitePay.",
-        status: 502,
+        error: "internal_checkout_error",
+        message: sanitizeErrorMessage(error instanceof Error ? error.message : "Erro interno desconhecido."),
+        detail: developmentDetail(error),
       },
       { status: 502 },
     );
   }
+}
+
+function sanitizeCheckoutRequest(value: unknown) {
+  if (!value || typeof value !== "object") return value;
+  const body = value as Record<string, unknown>;
+  return { ...body, ...(body.customer && typeof body.customer === "object" ? { customer: sanitizeCustomer(body.customer as CustomerData) } : {}) };
+}
+
+function sanitizeCustomer(customer: CustomerData) {
+  return { ...customer, cpf: maskValue(customer.cpf, 2), whatsapp: maskValue(customer.whatsapp, 4), email: maskEmail(customer.email) };
+}
+
+function maskEmail(value: string) {
+  const [local, domain] = value.split("@");
+  return domain ? `${local.slice(0, 2)}***@${domain}` : "***";
+}
+
+function maskValue(value: string, visibleEnd: number) {
+  return value.length > visibleEnd ? `${"*".repeat(Math.min(6, value.length - visibleEnd))}${value.slice(-visibleEnd)}` : "***";
+}
+
+function developmentDetail(error: unknown) {
+  if (process.env.NODE_ENV !== "development") return undefined;
+  if (error instanceof InfinitePayError) return { status: error.status, response: error.responseBody };
+  if (error instanceof Error) return { name: error.name, message: error.message, cause: error.cause };
+  return String(error);
 }
 
 function buildPaymentItems(
