@@ -15,7 +15,7 @@ export function ShippingOptions({ selected, onSelect }: Props) {
           const active = selected === option.id;
           return (
             <label key={option.id} className={`relative flex min-h-40 cursor-pointer flex-col rounded-[20px] border p-4 transition ${active ? "border-[#0D1B2A] bg-[#C9C6F0]/35 shadow-[0_8px_25px_rgba(13,27,42,.08)] ring-2 ring-[#C9C6F0]" : "border-[#E6E8ED] bg-[#F7F8FA] hover:border-[#C9C6F0]"}`}>
-              {option.id === "jadlog" && <span className="absolute right-3 top-3 rounded-full bg-[#C9C6F0] px-2 py-1 text-[8px] font-extrabold uppercase tracking-wider text-[#0D1B2A]">Recomendado</span>}
+              {option.id === "jadlog" && <span className="absolute right-3 top-3 rounded-full bg-[#C9C6F0]/60 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide text-[#0D1B2A]">Recomendado</span>}
               <input type="radio" name="shipping" value={option.id} checked={active} onChange={() => onSelect(option.id)} className="sr-only" />
               <span className={`grid size-5 place-items-center rounded-full border text-[10px] ${active ? "border-[#0D1B2A] bg-[#0D1B2A] text-white" : "border-[#E6E8ED] bg-white"}`}>{active ? "✓" : ""}</span>
               <strong className="mt-5 pr-10 text-sm leading-5 text-[#0D1B2A]">{option.name}</strong>

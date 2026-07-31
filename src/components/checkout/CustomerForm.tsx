@@ -64,7 +64,7 @@ export function CustomerForm({ data, onChange }: Props) {
           <div><p className="section-kicker">Entrega</p><h2 className="section-title">Endereço de entrega</h2><p className="section-description">Informe onde deseja receber os itens do seu pedido.</p></div>
         </div>
         <div className="grid gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2">{field("CEP", "zipCode", "00000-000", { required: true, inputMode: "numeric", pattern: "\\d{5}-\\d{3}", autoComplete: "postal-code", hint: digits(data.zipCode) === "05388090" ? "✓ Endereço preenchido automaticamente" : "Digite o CEP para continuar" })}</div>
+          <div className="sm:col-span-2">{field("CEP", "zipCode", "00000-000", { required: true, inputMode: "numeric", pattern: "\\d{5}-\\d{3}", autoComplete: "postal-code", hint: digits(data.zipCode) === "05388090" ? "Endereço localizado. Confira o número e complemento." : "Digite o CEP para continuar" })}</div>
           <div className="sm:col-span-4">{field("Rua", "street", "Nome da rua", { required: true, autoComplete: "address-line1" })}</div>
           <div className="sm:col-span-2">{field("Número", "number", "123", { required: true, inputMode: "numeric" })}</div>
           <div className="sm:col-span-4">{field("Complemento", "complement", "Apto, bloco, casa...", { autoComplete: "address-line2" })}</div>

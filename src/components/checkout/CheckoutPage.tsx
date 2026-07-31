@@ -116,7 +116,8 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
                   </div>
                   <div className="my-5 h-px bg-[#E6E8ED]" />
                   <div className="flex items-end justify-between"><div><span className="text-xs font-semibold text-[#344563]">Total a pagar</span><p className="text-[10px] text-[#344563]">em ambiente seguro</p></div><strong className="text-3xl tracking-[-.05em] text-[#0D1B2A]">{formatCurrency(total)}</strong></div>
-                  <button type="button" onClick={finish} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0D1B2A] px-4 py-4 text-sm font-bold text-white shadow-[0_10px_22px_rgba(13,27,42,.22)] transition hover:bg-[#344563] hover:ring-4 hover:ring-[#C9C6F0]">Ir para pagamento seguro <span>→</span></button>
+                  <p className="mt-4 text-center text-[11px] leading-5 text-[#344563]">Você será direcionado para o ambiente seguro da InfinitePay.</p>
+                  <button type="button" onClick={finish} className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0D1B2A] px-4 py-4 text-sm font-bold text-white shadow-[0_10px_22px_rgba(13,27,42,.22)] transition hover:bg-[#344563] hover:ring-4 hover:ring-[#C9C6F0]">Finalizar no pagamento seguro <span>→</span></button>
                   <div className="mt-4 flex items-center justify-center gap-2 rounded-full bg-[#C9C6F0]/45 px-3 py-2 text-[10px] font-semibold text-[#0D1B2A]">✓ Seus dados estão protegidos</div>
                 </div>
               </aside>
