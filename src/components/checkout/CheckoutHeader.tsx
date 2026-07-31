@@ -1,22 +1,24 @@
+import { BrandLogo } from "@/components/brand/BrandLogo";
+
 type Props = { sellerName: string };
 
 export function CheckoutHeader({ sellerName }: Props) {
   return (
-    <header className="border-b border-[#dfe9e3] bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-3">
-          <div className="grid size-10 place-items-center rounded-xl bg-[#2F7D5C] text-xl font-semibold text-white">E</div>
-          <div>
-            <p className="font-serif text-xl font-semibold leading-none text-[#1F2933]">Eleva Saúde</p>
-            <p className="mt-1 hidden text-[11px] text-[#66736d] sm:block">Cuidado que acompanha você</p>
+    <header className="sticky top-0 z-40 border-b border-[#E6E8ED] bg-white/95 shadow-[0_8px_30px_rgba(13,27,42,.04)] backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
+        <BrandLogo />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden items-center gap-2 rounded-full bg-[#C9C6F0] px-3 py-2 text-xs font-bold text-[#0D1B2A] sm:flex">
+            <span aria-hidden>✓</span> Pagamento seguro
+          </div>
+          <div className="rounded-xl border border-[#E6E8ED] bg-[#F7F8FA] px-3 py-2 text-right sm:rounded-2xl sm:px-4">
+            <p className="text-[9px] font-bold uppercase tracking-[.12em] text-[#344563]">Pedido acompanhado por</p>
+            <p className="text-sm font-bold leading-tight text-[#0D1B2A]">{sellerName}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF5EF] px-3 py-1.5 text-xs font-semibold text-[#2F7D5C]">
-            <span aria-hidden>⌾</span> Pagamento seguro
-          </p>
-          <p className="mt-1.5 text-xs text-[#66736d]">Atendimento com: <strong className="text-[#1F2933]">{sellerName}</strong></p>
-        </div>
+      </div>
+      <div className="border-t border-[#E6E8ED] bg-[#F7F8FA] px-4 py-2 text-center text-[10px] font-medium text-[#344563] sm:hidden">
+        Escolha o item combinado no atendimento e finalize com segurança.
       </div>
     </header>
   );

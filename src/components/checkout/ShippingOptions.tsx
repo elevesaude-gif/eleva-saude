@@ -5,22 +5,22 @@ type Props = { selected: string; onSelect: (id: string) => void };
 
 export function ShippingOptions({ selected, onSelect }: Props) {
   return (
-    <section className="rounded-3xl border border-[#dfe8e3] bg-white p-5 sm:p-6">
-      <div className="mb-5 flex items-center gap-3">
-        <span className="grid size-10 place-items-center rounded-xl bg-[#fff5dc] text-[#a8761d]">⇢</span>
-        <div><h2 className="font-bold text-[#1F2933]">Escolha o frete</h2><p className="text-xs text-[#748079]">Valores e prazos simulados</p></div>
+    <section className="checkout-card">
+      <div className="section-heading">
+        <span className="section-icon">↗</span>
+        <div><p className="section-kicker">Forma de entrega</p><h2 className="section-title">Como deseja receber?</h2><p className="section-description">Escolha a opção que combina com seu momento.</p></div>
       </div>
-      <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         {shippingOptions.map((option) => {
           const active = selected === option.id;
           return (
-            <label key={option.id} className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition ${active ? "border-[#2F7D5C] bg-[#f4faf7] ring-1 ring-[#2F7D5C]" : "border-[#dfe6e2] hover:border-[#9bb9aa]"}`}>
-              <input type="radio" name="shipping" value={option.id} checked={active} onChange={() => onSelect(option.id)} className="size-4 accent-[#2F7D5C]" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold text-[#1F2933]">{option.name}</span>
-                <span className="text-xs text-[#748079]">{option.estimate}</span>
-              </span>
-              <strong className="text-sm text-[#2F7D5C]">{formatCurrency(option.price)}</strong>
+            <label key={option.id} className={`relative flex min-h-40 cursor-pointer flex-col rounded-[20px] border p-4 transition ${active ? "border-[#0D1B2A] bg-[#C9C6F0]/35 shadow-[0_8px_25px_rgba(13,27,42,.08)] ring-2 ring-[#C9C6F0]" : "border-[#E6E8ED] bg-[#F7F8FA] hover:border-[#C9C6F0]"}`}>
+              {option.id === "jadlog" && <span className="absolute right-3 top-3 rounded-full bg-[#C9C6F0] px-2 py-1 text-[8px] font-extrabold uppercase tracking-wider text-[#0D1B2A]">Recomendado</span>}
+              <input type="radio" name="shipping" value={option.id} checked={active} onChange={() => onSelect(option.id)} className="sr-only" />
+              <span className={`grid size-5 place-items-center rounded-full border text-[10px] ${active ? "border-[#0D1B2A] bg-[#0D1B2A] text-white" : "border-[#E6E8ED] bg-white"}`}>{active ? "✓" : ""}</span>
+              <strong className="mt-5 pr-10 text-sm leading-5 text-[#0D1B2A]">{option.name}</strong>
+              <span className="mt-2 text-xs text-[#344563]">{option.estimate}</span>
+              <strong className="mt-auto pt-3 text-base text-[#0D1B2A]">{formatCurrency(option.price)}</strong>
             </label>
           );
         })}

@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7faf8;
-  --foreground: #1f2933;
+  --brand-petroleum: #0d1b2a;
+  --brand-slate: #344563;
+  --brand-lavender: #c9c6f0;
+  --brand-off-white: #f7f8fa;
+  --brand-mist: #e6e8ed;
+  --background: var(--brand-off-white);
+  --foreground: var(--brand-petroleum);
 }
 
 @theme inline {
@@ -25,6 +30,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -36,9 +42,74 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: var(--brand-lavender);
+  color: var(--brand-petroleum);
+}
+
+.checkout-card {
+  border: 1px solid var(--brand-mist);
+  border-radius: 28px;
+  background: white;
+  padding: 20px;
+  box-shadow: 0 12px 40px rgb(13 27 42 / 0.055);
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.section-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--brand-lavender);
+  color: var(--brand-petroleum);
+  font-weight: 800;
+}
+
+.section-kicker {
+  margin-bottom: 2px;
+  color: var(--brand-slate);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.section-title {
+  color: var(--brand-petroleum);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.section-description {
+  margin-top: 3px;
+  color: var(--brand-slate);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .checkout-card {
+    padding: 24px;
+  }
+}
+
 button:focus-visible,
 input:focus-visible,
 a:focus-visible {
-  outline: 3px solid color-mix(in srgb, #2f7d5c 30%, transparent);
+  outline: 3px solid var(--brand-lavender);
   outline-offset: 2px;
 }

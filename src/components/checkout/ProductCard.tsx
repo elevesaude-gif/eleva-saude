@@ -5,27 +5,32 @@ type Props = { product: Product; quantity: number; onAdd: () => void; onRemove: 
 
 export function ProductCard({ product, quantity, onAdd, onRemove }: Props) {
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-[#e0e8e3] bg-white p-3 shadow-[0_10px_35px_rgba(31,41,51,.055)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(31,41,51,.09)]">
-      <div className="grid h-32 place-items-center rounded-[20px] text-5xl text-[#2F7D5C]" style={{ backgroundColor: product.accent }}>
-        <span className="grid size-20 place-items-center rounded-full border border-white/70 bg-white/45">{product.icon}</span>
+    <article className={`group relative flex h-full flex-col overflow-hidden rounded-[26px] border bg-white p-3 shadow-[0_12px_40px_rgba(13,27,42,.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_48px_rgba(13,27,42,.1)] ${quantity ? "border-[#0D1B2A] ring-2 ring-[#C9C6F0]" : "border-[#E6E8ED]"}`}>
+      {quantity > 0 && <span className="absolute right-5 top-5 z-10 rounded-full bg-[#0D1B2A] px-2.5 py-1 text-[10px] font-bold text-white shadow-md">{quantity} no pedido</span>}
+      <div className="relative grid h-36 place-items-center overflow-hidden rounded-[20px] bg-[#F7F8FA] text-4xl text-[#0D1B2A] sm:h-40">
+        <span className="absolute -right-7 -top-8 size-24 rounded-full border-[18px] border-[#C9C6F0]/60" />
+        <span className="absolute -bottom-12 -left-8 size-28 rounded-full bg-[#E6E8ED]" />
+        <span className="relative grid size-20 place-items-center rounded-[24px] border border-[#E6E8ED] shadow-[0_10px_25px_rgba(13,27,42,.08)]" style={{ backgroundColor: product.accent }}>{product.icon}</span>
       </div>
-      <div className="flex flex-1 flex-col p-2 pt-4">
-        <span className="mb-2 text-[10px] font-bold uppercase tracking-[.14em] text-[#2F7D5C]">{product.category}</span>
-        <h3 className="text-base font-bold text-[#1F2933]">{product.name}</h3>
-        <p className="mt-1.5 flex-1 text-sm leading-5 text-[#69756f]">{product.description}</p>
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <strong className="text-lg text-[#1F2933]">{formatCurrency(product.price)}</strong>
-          {quantity === 0 ? (
-            <button type="button" onClick={onAdd} aria-label={`Adicionar ${product.name}`}
-              className="grid size-10 place-items-center rounded-xl bg-[#2F7D5C] text-xl font-medium text-white transition hover:bg-[#25694c]">+</button>
-          ) : (
-            <div className="flex items-center rounded-xl border border-[#d7e1db] bg-[#f8faf9] p-1">
-              <button type="button" onClick={onRemove} className="grid size-8 place-items-center rounded-lg text-lg text-[#2F7D5C] hover:bg-white">−</button>
-              <span className="w-7 text-center text-sm font-bold">{quantity}</span>
-              <button type="button" onClick={onAdd} className="grid size-8 place-items-center rounded-lg text-lg text-[#2F7D5C] hover:bg-white">+</button>
-            </div>
-          )}
+      <div className="flex flex-1 flex-col px-2 pb-1 pt-4">
+        <span className="mb-2 text-[9px] font-extrabold uppercase tracking-[.16em] text-[#344563]">{product.category}</span>
+        <h3 className="text-[17px] font-bold leading-tight tracking-[-.01em] text-[#0D1B2A]">{product.name}</h3>
+        <p className="mt-2 flex-1 text-[13px] leading-5 text-[#344563]">{product.description}</p>
+        <div className="mt-5">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-[#344563]">Investimento</span>
+          <strong className="block text-xl tracking-[-.03em] text-[#0D1B2A]">{formatCurrency(product.price)}</strong>
         </div>
+        {quantity === 0 ? (
+          <button type="button" onClick={onAdd} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0D1B2A] py-2.5 text-sm font-bold text-white transition hover:bg-[#344563] hover:ring-4 hover:ring-[#C9C6F0]">
+            <span className="text-lg leading-none">+</span> Adicionar ao pedido
+          </button>
+        ) : (
+          <div className="mt-4 flex items-center justify-between rounded-xl bg-[#C9C6F0] p-1.5">
+            <button type="button" onClick={onRemove} aria-label={`Remover uma unidade de ${product.name}`} className="grid size-9 place-items-center rounded-lg bg-white text-lg text-[#0D1B2A] shadow-sm">−</button>
+            <span className="text-center text-sm font-bold text-[#0D1B2A]"><span className="block text-[9px] font-semibold uppercase opacity-70">Quantidade</span>{quantity}</span>
+            <button type="button" onClick={onAdd} aria-label={`Adicionar mais uma unidade de ${product.name}`} className="grid size-9 place-items-center rounded-lg bg-[#0D1B2A] text-lg text-white shadow-sm">+</button>
+          </div>
+        )}
       </div>
     </article>
   );
