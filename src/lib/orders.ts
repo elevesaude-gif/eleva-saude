@@ -52,7 +52,28 @@ export type OrderRecord = {
   capture_method: string | null;
 };
 
-export async function createOrderWithItems(input: CreateOrderInput): Promise<OrderRecord> {
+type OrderSaveStage = "order_saved" | "saving_items" | "items_saved";
+
+type SupabaseErrorShape = {
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+};
+
+function throwSupabaseError(error: SupabaseErrorShape): never {
+  throw new Error(JSON.stringify({
+    message: error.message,
+    code: error.code,
+    details: error.details,
+    hint: error.hint,
+  }));
+}
+
+export async function createOrderWithItems(
+  input: CreateOrderInput,
+  onStage?: (stage: OrderSaveStage) => void,
+): Promise<OrderRecord> {
   const supabase = getSupabaseServerClient();
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -88,7 +109,10 @@ export async function createOrderWithItems(input: CreateOrderInput): Promise<Ord
     .select("id, order_nsu, total_cents, payment_status, payment_url, transaction_nsu, receipt_url, capture_method")
     .single();
 
-  if (orderError) throw new Error(`Não foi possível salvar o pedido: ${orderError.message}`);
+  if (orderError) throwSupabaseError(orderError);
+  if (!order) throw new Error(JSON.stringify({ message: "Supabase não retornou o pedido inserido." }));
+  onStage?.("order_saved");
+  onStage?.("saving_items");
 
   const { error: itemsError } = await supabase.from("order_items").insert(
     input.items.map((item) => ({
@@ -101,13 +125,14 @@ export async function createOrderWithItems(input: CreateOrderInput): Promise<Ord
     })),
   );
 
-  if (itemsError) throw new Error(`Pedido salvo, mas não foi possível salvar os itens: ${itemsError.message}`);
+  if (itemsError) throwSupabaseError(itemsError);
+  onStage?.("items_saved");
   return order as OrderRecord;
 }
 
 export async function updateOrderPaymentUrl(orderId: string, paymentUrl: string) {
   const { error } = await getSupabaseServerClient().from("orders").update({ payment_url: paymentUrl }).eq("id", orderId);
-  if (error) throw new Error(`Não foi possível salvar a URL de pagamento: ${error.message}`);
+  if (error) throwSupabaseError(error);
 }
 
 export async function recordCheckoutFailure(orderId: string, rawCheckoutPayload: unknown) {
@@ -115,7 +140,7 @@ export async function recordCheckoutFailure(orderId: string, rawCheckoutPayload:
     .from("orders")
     .update({ raw_checkout_payload: rawCheckoutPayload, payment_url: null })
     .eq("id", orderId);
-  if (error) throw new Error(`Não foi possível registrar a falha do checkout: ${error.message}`);
+  if (error) throwSupabaseError(error);
 }
 
 export async function findOrderByNsu(orderNsu: string): Promise<OrderRecord | null> {
@@ -124,7 +149,7 @@ export async function findOrderByNsu(orderNsu: string): Promise<OrderRecord | nu
     .select("id, order_nsu, total_cents, payment_status, payment_url, transaction_nsu, receipt_url, capture_method")
     .eq("order_nsu", orderNsu)
     .maybeSingle();
-  if (error) throw new Error(`Não foi possível consultar o pedido: ${error.message}`);
+  if (error) throwSupabaseError(error);
   return data as OrderRecord | null;
 }
 
@@ -149,7 +174,7 @@ export async function markOrderAsPaid(input: {
       raw_webhook_payload: input.rawWebhookPayload,
     })
     .eq("id", input.orderId);
-  if (error) throw new Error(`Não foi possível confirmar o pagamento: ${error.message}`);
+  if (error) throwSupabaseError(error);
 }
 
 export async function recordPaymentEvent(input: {
@@ -166,7 +191,7 @@ export async function recordPaymentEvent(input: {
       .select("id")
       .eq("transaction_nsu", input.transactionNsu)
       .maybeSingle();
-    if (error) throw new Error(`Não foi possível verificar o evento: ${error.message}`);
+    if (error) throwSupabaseError(error);
     if (data) return { duplicate: true };
   }
 
@@ -179,6 +204,6 @@ export async function recordPaymentEvent(input: {
     payload: input.payload,
   });
   if (error?.code === "23505") return { duplicate: true };
-  if (error) throw new Error(`Não foi possível registrar o evento: ${error.message}`);
+  if (error) throwSupabaseError(error);
   return { duplicate: false };
 }

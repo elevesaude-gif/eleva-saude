@@ -58,8 +58,15 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
           totalCents: Math.round(total * 100),
         }),
       });
-      const data: unknown = await response.json().catch(() => null);
+      const responseText = await response.text();
+      let data: unknown;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = { ok: false, error: "non_json_response", message: responseText };
+      }
       console.log("[InfinitePay] status HTTP", response.status);
+      console.log("[InfinitePay] resposta bruta do endpoint", responseText);
       console.log("[InfinitePay] resposta completa do endpoint", data);
       if (!response.ok || !isPaymentResponse(data)) {
         console.error("[InfinitePay] erro ao criar pagamento", {

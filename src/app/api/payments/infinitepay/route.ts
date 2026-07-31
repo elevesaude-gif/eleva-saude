@@ -6,6 +6,7 @@ import {
 import { products, sellers, shippingOptions } from "@/lib/mock-data";
 import { createOrderWithItems, recordCheckoutFailure, updateOrderPaymentUrl } from "@/lib/orders";
 import type { CustomerData, SellerSlug } from "@/types/checkout";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,14 +23,16 @@ type CheckoutRequest = {
 export async function POST(request: Request) {
   let savedOrder: { id: string; order_nsu: string } | undefined;
   let sanitizedPayload: unknown;
+  let stage: "validation" | "supabase" | "infinitepay" = "validation";
 
   try {
     const input: unknown = await request.json();
     sanitizedPayload = sanitizeCheckoutRequest(input);
-    debugInfo("[InfinitePay] checkout recebido", sanitizedPayload);
+    debugInfo("1. payload recebido", sanitizedPayload);
     if (!isCheckoutRequest(input)) {
-      return Response.json({ error: "invalid_checkout_request", message: "Dados do pedido inválidos." }, { status: 400 });
+      return errorResponse("validation_error", "Dados do pedido inválidos.", 400);
     }
+    debugInfo("2. validação concluída");
 
     const canonicalLines = input.items.map((requestedItem) => {
       const product = products.find((candidate) => candidate.id === requestedItem.id);
@@ -57,8 +60,11 @@ export async function POST(request: Request) {
     if (input.totalCents !== totalCents) {
       throw new InvalidCheckoutError("O total do pedido mudou. Revise o pedido e tente novamente.");
     }
+    debugInfo("3. totais recalculados", { subtotalCents, discountCents, shippingCents, totalCents });
 
     const orderNsu = generateOrderNsu();
+    stage = "supabase";
+    debugInfo("4. salvando pedido no Supabase");
     savedOrder = await createOrderWithItems({
       orderNsu,
       sellerSlug: input.seller,
@@ -94,10 +100,16 @@ export async function POST(request: Request) {
         unitPriceCents: line.unitPriceCents,
         totalPriceCents: line.lineTotalCents,
       })),
+    }, (saveStage) => {
+      if (saveStage === "order_saved") debugInfo("5. pedido salvo");
+      if (saveStage === "saving_items") debugInfo("6. salvando itens");
+      if (saveStage === "items_saved") debugInfo("7. itens salvos");
     });
 
     const paymentItems = buildPaymentItems(canonicalLines, discountCents, subtotalCents);
     paymentItems.push({ description: `Frete - ${shipping.name}`, quantity: 1, price: shippingCents });
+    stage = "infinitepay";
+    debugInfo("8. criando checkout InfinitePay");
     const paymentUrl = await createInfinitePayCheckout({
       orderNsu: savedOrder.order_nsu,
       items: paymentItems,
@@ -113,9 +125,13 @@ export async function POST(request: Request) {
       },
       totalCents,
     });
+    debugInfo("9. paymentUrl recebida", { paymentUrl });
 
+    stage = "supabase";
     await updateOrderPaymentUrl(savedOrder.id, paymentUrl);
-    return Response.json({ ok: true, orderId: savedOrder.id, orderNsu: savedOrder.order_nsu, paymentUrl });
+    debugInfo("10. payment_url salva no Supabase");
+    debugInfo("11. retornando sucesso ao front");
+    return NextResponse.json({ ok: true, orderId: savedOrder.id, orderNsu: savedOrder.order_nsu, paymentUrl });
   } catch (error) {
     if (savedOrder) {
       await recordCheckoutFailure(savedOrder.id, {
@@ -124,13 +140,21 @@ export async function POST(request: Request) {
       }).catch((storageError) => debugError("[InfinitePay] falha ao registrar erro", storageError));
     }
     if (error instanceof InvalidCheckoutError) {
-      return Response.json({ error: "invalid_checkout_request", message: error.message }, { status: 400 });
+      return errorResponse("validation_error", error.message, 400, error);
     }
     debugError("[InfinitePay] falha ao criar checkout", error);
-    return Response.json(
-      { error: "internal_checkout_error", message: "Não foi possível iniciar o pagamento. Tente novamente." },
-      { status: error instanceof InfinitePayError ? normalizeHttpStatus(error.status) : 502 },
-    );
+    if (error instanceof InfinitePayError || stage === "infinitepay") {
+      return errorResponse(
+        "infinitepay_error",
+        "A InfinitePay não conseguiu criar o pagamento.",
+        error instanceof InfinitePayError ? normalizeHttpStatus(error.status) : 502,
+        error,
+      );
+    }
+    if (stage === "supabase") {
+      return errorResponse("supabase_error", "Não foi possível salvar ou consultar o pedido.", 500, error);
+    }
+    return errorResponse("internal_checkout_error", "Não foi possível iniciar o pagamento. Tente novamente.", 500, error);
   }
 }
 
@@ -182,9 +206,54 @@ function sanitizeCheckoutRequest(value: unknown) {
 }
 
 function safeErrorForStorage(error: unknown) {
-  if (error instanceof InfinitePayError) return { name: error.name, status: error.status, message: error.message, response: error.responseBody };
-  if (error instanceof Error) return { name: error.name, message: error.message };
+  if (error instanceof InfinitePayError) return { ...serializeError(error), status: error.status, response: error.responseBody };
+  if (error instanceof Error) return serializeError(error);
   return { message: String(error) };
+}
+
+type CheckoutErrorCode = "supabase_error" | "infinitepay_error" | "validation_error" | "internal_checkout_error";
+
+function errorResponse(code: CheckoutErrorCode, message: string, status: number, error?: unknown) {
+  return NextResponse.json({
+    ok: false,
+    error: code,
+    message,
+    detail: process.env.NODE_ENV === "development" && error !== undefined ? serializeError(error) : undefined,
+  }, { status });
+}
+
+function serializeError(error: unknown) {
+  if (!(error instanceof Error)) return { name: "UnknownError", message: String(error), cause: undefined };
+  const supabase = parseSupabaseError(error.message);
+  return {
+    name: error.name,
+    message: supabase?.message ?? error.message,
+    cause: serializeCause(error.cause),
+    ...(supabase ? { code: supabase.code, details: supabase.details, hint: supabase.hint } : {}),
+  };
+}
+
+function parseSupabaseError(message: string): { message: string; code?: string; details?: string; hint?: string } | undefined {
+  try {
+    const parsed: unknown = JSON.parse(message);
+    if (!parsed || typeof parsed !== "object") return undefined;
+    const value = parsed as Record<string, unknown>;
+    if (typeof value.message !== "string") return undefined;
+    return {
+      message: value.message,
+      code: typeof value.code === "string" ? value.code : undefined,
+      details: typeof value.details === "string" ? value.details : undefined,
+      hint: typeof value.hint === "string" ? value.hint : undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function serializeCause(cause: unknown): unknown {
+  if (cause instanceof Error) return { name: cause.name, message: cause.message };
+  if (cause === undefined || cause === null || ["string", "number", "boolean"].includes(typeof cause)) return cause;
+  return String(cause);
 }
 
 function generateOrderNsu() {
@@ -195,6 +264,6 @@ function normalizePhone(value: string) { const digits = value.replace(/\D/g, "")
 function maskEmail(value: string) { const [local, domain] = value.split("@"); return domain ? `${local.slice(0, 2)}***@${domain}` : "***"; }
 function maskValue(value: string, visibleEnd: number) { return value.length > visibleEnd ? `${"*".repeat(Math.min(6, value.length - visibleEnd))}${value.slice(-visibleEnd)}` : "***"; }
 function normalizeHttpStatus(status: number) { return Number.isInteger(status) && status >= 400 && status <= 599 ? status : 502; }
-function debugInfo(message: string, details: unknown) { if (process.env.INFINITEPAY_DEBUG === "true") console.info(message, details); }
+function debugInfo(message: string, details?: unknown) { if (process.env.INFINITEPAY_DEBUG === "true") console.info(message, details ?? ""); }
 function debugError(message: string, details: unknown) { if (process.env.INFINITEPAY_DEBUG === "true") console.error(message, details); }
 class InvalidCheckoutError extends Error {}
