@@ -55,6 +55,7 @@ export async function createInfinitePayCheckout({
   }
 
   const redirectUrl = `${appUrl}/pedido/sucesso`;
+  const webhookUrl = `${appUrl}/api/webhooks/infinitepay`;
   const payload = {
     handle,
     order_nsu: orderNsu,
@@ -69,10 +70,17 @@ export async function createInfinitePayCheckout({
     } } : {}),
     items,
     redirect_url: redirectUrl,
+    webhook_url: webhookUrl,
   };
 
-  debugInfo("[InfinitePay] handle usado", maskValue(handle, 3));
-  debugInfo("[InfinitePay] payload final enviado", sanitizePayloadForLog(payload));
+  debugInfo("[InfinitePay] checkout enviado", {
+    handle,
+    order_nsu: orderNsu,
+    redirect_url: redirectUrl,
+    webhook_url: webhookUrl,
+    item_count: items.length,
+    total_cents: totalCents,
+  });
 
   let response: Response;
   try {
@@ -113,7 +121,7 @@ export async function createInfinitePayCheckout({
 }
 
 export function getInfinitePayHandle(): string {
-  const handle = process.env.INFINITEPAY_HANDLE?.trim();
+  const handle = process.env.INFINITEPAY_HANDLE?.trim().replace(/^\$+/, "");
   if (!handle) throw new InfinitePayError("INFINITEPAY_HANDLE não configurado", 500);
   return handle;
 }
@@ -152,41 +160,6 @@ function getAppUrl() {
   }
   if (process.env.NODE_ENV === "development") return "http://localhost:3000";
   throw new InfinitePayError("NEXT_PUBLIC_APP_URL não configurada.", 500);
-}
-
-function sanitizePayloadForLog(payload: {
-  handle: string;
-  order_nsu: string;
-  customer?: { name: string; email: string; phone_number: string };
-  address?: { cep: string; number: string; complement?: string };
-  items: InfinitePayItem[];
-  redirect_url?: string;
-}) {
-  return {
-    ...payload,
-    handle: maskValue(payload.handle, 3),
-    ...(payload.customer ? { customer: {
-      name: payload.customer.name,
-      email: maskEmail(payload.customer.email),
-      phone_number: maskValue(payload.customer.phone_number, 4),
-    } } : {}),
-    ...(payload.address ? { address: {
-      cep: maskValue(payload.address.cep, 3),
-      number: "***",
-      ...(payload.address.complement ? { complement: "***" } : {}),
-    } } : {}),
-  };
-}
-
-function maskEmail(value: string) {
-  const [localPart, domain] = value.split("@");
-  return domain ? `${localPart.slice(0, 2)}***@${domain}` : "***";
-}
-
-function maskValue(value: string, visibleEnd: number) {
-  return value.length > visibleEnd
-    ? `${"*".repeat(Math.min(6, value.length - visibleEnd))}${value.slice(-visibleEnd)}`
-    : "***";
 }
 
 function getFetchErrorDetails(error: unknown) {

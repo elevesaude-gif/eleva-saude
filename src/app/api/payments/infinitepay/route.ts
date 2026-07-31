@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   try {
     const input: unknown = await request.json();
     sanitizedPayload = sanitizeCheckoutRequest(input);
-    debugInfo("1. payload recebido", sanitizedPayload);
+    debugInfo("1. payload recebido");
     if (!isCheckoutRequest(input)) {
       return errorResponse("validation_error", "Dados do pedido inválidos.", 400);
     }

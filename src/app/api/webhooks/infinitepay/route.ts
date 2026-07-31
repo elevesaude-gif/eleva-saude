@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const transactionNsu = readString(body, "transaction_nsu");
     const receiptUrl = safeHttpsUrl(readString(body, "receipt_url"));
     const captureMethod = readString(body, "capture_method");
-    const paidAmountCents = readInteger(body, ["paid_amount_cents", "paid_amount", "amount_cents", "amount"]);
+    const paidAmountCents = readInteger(body, ["amount_cents", "amount", "paid_amount_cents", "paid_amount"]);
     const order = orderNsu ? await findOrderByNsu(orderNsu) : null;
     const event = await recordPaymentEvent({
       orderId: order?.id,
