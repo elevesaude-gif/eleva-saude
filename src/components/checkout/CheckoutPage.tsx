@@ -174,14 +174,16 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
   );
 }
 
-function isPaymentResponse(value: unknown): value is { ok: true; orderNsu: string; paymentUrl: string } {
+function isPaymentResponse(value: unknown): value is { ok: true; orderId: string; orderNsu: string; paymentUrl: string } {
   return Boolean(
     value &&
     typeof value === "object" &&
     "ok" in value &&
+    "orderId" in value &&
     "orderNsu" in value &&
     "paymentUrl" in value &&
     value.ok === true &&
+    typeof value.orderId === "string" &&
     typeof value.orderNsu === "string" &&
     typeof value.paymentUrl === "string" &&
     value.paymentUrl.startsWith("https://checkout.infinitepay.io/")

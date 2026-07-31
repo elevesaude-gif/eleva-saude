@@ -41,7 +41,7 @@ export async function createInfinitePayCheckout({
   customer,
   totalCents,
 }: CreateInfinitePayCheckoutInput): Promise<string> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, "");
+  const appUrl = getAppUrl();
 
   const handle = getInfinitePayHandle();
 
@@ -54,7 +54,7 @@ export async function createInfinitePayCheckout({
     throw new InfinitePayError("Total ou itens do checkout inconsistentes.", 400);
   }
 
-  const redirectUrl = appUrl && !isLocalUrl(appUrl) ? `${appUrl}/pedido/sucesso` : undefined;
+  const redirectUrl = `${appUrl}/pedido/sucesso`;
   const payload = {
     handle,
     order_nsu: orderNsu,
@@ -68,11 +68,11 @@ export async function createInfinitePayCheckout({
       ...(customer.address.complement ? { complement: customer.address.complement } : {}),
     } } : {}),
     items,
-    ...(redirectUrl ? { redirect_url: redirectUrl } : {}),
+    redirect_url: redirectUrl,
   };
 
-  console.info("[InfinitePay] handle usado", handle);
-  console.info("[InfinitePay] payload final enviado", sanitizePayloadForLog(payload));
+  debugInfo("[InfinitePay] handle usado", maskValue(handle, 3));
+  debugInfo("[InfinitePay] payload final enviado", sanitizePayloadForLog(payload));
 
   let response: Response;
   try {
@@ -89,7 +89,7 @@ export async function createInfinitePayCheckout({
 
   const responseText = await response.text();
   const data = parseResponseBody(responseText);
-  console.info("[InfinitePay] status e resposta", { status: response.status, response: data });
+  debugInfo("[InfinitePay] status e resposta", { status: response.status, response: data });
 
   if (!response.ok) {
     debugError("[InfinitePay] corpo da resposta de erro", data);
@@ -141,13 +141,17 @@ function getInfinitePayErrorMessage(value: unknown): string | undefined {
   }
 }
 
-function isLocalUrl(value: string) {
-  try {
-    const hostname = new URL(value).hostname;
-    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-  } catch {
-    return false;
+function getAppUrl() {
+  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, "");
+  if (configured) {
+    try {
+      return new URL(configured).toString().replace(/\/+$/, "");
+    } catch {
+      throw new InfinitePayError("NEXT_PUBLIC_APP_URL inválida.", 500);
+    }
   }
+  if (process.env.NODE_ENV === "development") return "http://localhost:3000";
+  throw new InfinitePayError("NEXT_PUBLIC_APP_URL não configurada.", 500);
 }
 
 function sanitizePayloadForLog(payload: {
@@ -204,4 +208,8 @@ function getFetchErrorDetails(error: unknown) {
 
 function debugError(message: string, details: unknown) {
   if (process.env.INFINITEPAY_DEBUG === "true") console.error(message, details);
+}
+
+function debugInfo(message: string, details: unknown) {
+  if (process.env.INFINITEPAY_DEBUG === "true") console.info(message, details);
 }
