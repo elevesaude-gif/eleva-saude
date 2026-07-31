@@ -26,7 +26,9 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
   const [customer, setCustomer] = useState(emptyCustomer);
   const [shippingId, setShippingId] = useState("jadlog");
   const [couponApplied, setCouponApplied] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
 
   const items = products.filter((product) => quantities[product.id]).map((product) => ({ ...product, quantity: quantities[product.id] }));
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -37,9 +39,39 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
   const filtered = useMemo(() => category === "Todos" ? products : products.filter((product) => product.category === category), [category]);
   const setQuantity = (id: string, delta: number) => setQuantities((current) => ({ ...current, [id]: Math.max(0, (current[id] ?? 0) + delta) }));
   const goToSummary = () => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const finish = () => {
+  const finish = async () => {
     const form = document.getElementById("checkout-form") as HTMLFormElement | null;
-    if (form?.reportValidity()) setReady(true);
+    if (!form?.reportValidity() || isPaymentLoading) return;
+
+    setIsPaymentLoading(true);
+    setPaymentError("");
+    try {
+      const response = await fetch("/api/payments/infinitepay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((item) => ({ id: item.id, quantity: item.quantity })),
+          customer,
+          seller,
+          shippingId,
+          couponCode: couponApplied ? couponCode : undefined,
+          totalCents: Math.round(total * 100),
+        }),
+      });
+      const data: unknown = await response.json().catch(() => null);
+      if (!response.ok || !isPaymentResponse(data)) {
+        console.error("[InfinitePay] erro ao criar pagamento", {
+          httpStatus: response.status,
+          response: data,
+        });
+        throw new Error("Pagamento indisponível.");
+      }
+      window.location.assign(data.paymentUrl);
+    } catch (error) {
+      console.error("[InfinitePay] falha técnica no checkout", error);
+      setPaymentError("Não foi possível iniciar o pagamento. Tente novamente ou fale com seu atendimento.");
+      setIsPaymentLoading(false);
+    }
   };
 
   return (
@@ -99,7 +131,7 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
                 </section>
                 <CustomerForm data={customer} onChange={setCustomer} />
                 <ShippingOptions selected={shippingId} onSelect={setShippingId} />
-                <CouponBox seller={seller} applied={couponApplied} onApply={setCouponApplied} />
+                <CouponBox seller={seller} applied={couponApplied} onApply={(applied, code) => { setCouponApplied(applied); setCouponCode(code); }} />
               </div>
               <aside className="overflow-hidden rounded-[28px] border border-[#E6E8ED] bg-white shadow-[0_18px_55px_rgba(13,27,42,.09)] lg:sticky lg:top-28">
                 <div className="bg-[#0D1B2A] p-5 text-white">
@@ -117,7 +149,10 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
                   <div className="my-5 h-px bg-[#E6E8ED]" />
                   <div className="flex items-end justify-between"><div><span className="text-xs font-semibold text-[#344563]">Total a pagar</span><p className="text-[10px] text-[#344563]">em ambiente seguro</p></div><strong className="text-3xl tracking-[-.05em] text-[#0D1B2A]">{formatCurrency(total)}</strong></div>
                   <p className="mt-4 text-center text-[11px] leading-5 text-[#344563]">Você será direcionado para o ambiente seguro da InfinitePay.</p>
-                  <button type="button" onClick={finish} className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#047857] px-4 py-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(4,120,87,.28)] transition hover:bg-[#065F46]">Finalizar no pagamento seguro <span>→</span></button>
+                  <button type="button" onClick={finish} disabled={isPaymentLoading} className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#047857] px-4 py-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(4,120,87,.28)] transition hover:bg-[#065F46] disabled:cursor-wait disabled:opacity-75">
+                    {isPaymentLoading ? <><span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> Gerando pagamento seguro...</> : <>Finalizar no pagamento seguro <span>→</span></>}
+                  </button>
+                  {paymentError && <div role="alert" className="mt-3 rounded-xl border border-[#B42318]/20 bg-[#FEF3F2] px-3 py-2.5 text-xs leading-5 text-[#B42318]">{paymentError}</div>}
                   <div className="mt-4 flex items-center justify-center gap-2 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-3 py-2 text-[10px] font-semibold text-[#047857]">✓ Seus dados estão protegidos</div>
                 </div>
               </aside>
@@ -130,30 +165,19 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
           <div className="flex items-center gap-2"><BrandLogo /><p className="hidden text-[11px] text-[#344563] md:block">Um caminho mais leve para a sua saúde</p></div>
           <div className="flex flex-wrap justify-center gap-4 text-[10px] font-bold uppercase tracking-wider text-[#344563]"><span>✓ Pagamento seguro</span><span>♡ Atendimento personalizado</span></div>
         </div>
-        <p className="mx-auto mt-6 max-w-7xl border-t border-[#E6E8ED] pt-4 text-center text-[10px] leading-4 text-[#344563]">Ambiente de demonstração local. Gateway ainda não integrado.</p>
+        <p className="mx-auto mt-6 max-w-7xl border-t border-[#E6E8ED] pt-4 text-center text-[10px] leading-4 text-[#344563]">Ambiente de demonstração local. Confirmação automática ainda não integrada.</p>
       </footer>
-      {ready && (
-        <div className="fixed inset-0 z-50 grid place-items-end bg-[#0D1B2A]/70 backdrop-blur-sm sm:place-items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="payment-title">
-          <div className="relative w-full max-w-md overflow-hidden rounded-t-[30px] bg-white shadow-2xl sm:rounded-[30px]">
-            <button type="button" onClick={() => setReady(false)} aria-label="Fechar modal" className="absolute right-4 top-4 z-10 grid size-9 place-items-center rounded-full bg-white/10 text-xl text-white hover:bg-[#C9C6F0] hover:text-[#0D1B2A]">×</button>
-            <div className="relative overflow-hidden bg-[#0D1B2A] px-7 pb-8 pt-9 text-center text-white">
-              <span className="absolute -right-10 -top-12 size-36 rounded-full border-[25px] border-[#C9C6F0]/10" />
-              <div className="relative mx-auto grid size-16 place-items-center rounded-[22px] bg-[#C9C6F0]"><BrandLogo compact /></div>
-              <p className="relative mt-5 text-[9px] font-bold uppercase tracking-[.18em] text-[#C9C6F0]">Pedido EL-260731-{seller === "isabela" ? "01" : "02"}</p>
-              <h2 id="payment-title" className="relative mt-2 font-serif text-2xl font-semibold">Pedido pronto para pagamento</h2>
-            </div>
-            <div className="p-6 sm:p-7">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-[#F7F8FA] p-4"><span className="text-[9px] font-bold uppercase tracking-wider text-[#344563]">Total</span><strong className="mt-1 block text-xl text-[#0D1B2A]">{formatCurrency(total)}</strong></div>
-                <div className="rounded-2xl bg-[#F7F8FA] p-4"><span className="text-[9px] font-bold uppercase tracking-wider text-[#344563]">Vendedor(a)</span><strong className="mt-1 block text-base text-[#0D1B2A]">{sellers[seller]}</strong></div>
-              </div>
-              <p className="mt-5 text-center text-sm leading-6 text-[#344563]">Na próxima etapa, este botão criará automaticamente um checkout seguro na InfinitePay usando a InfiniteTag <strong className="break-all text-[#0D1B2A]">stefane-santos-518</strong>.</p>
-              <button type="button" onClick={() => setReady(false)} className="mt-6 w-full rounded-2xl bg-[#047857] py-3.5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(4,120,87,.2)] hover:bg-[#065F46]">Entendi</button>
-              <button type="button" onClick={() => setReady(false)} className="mt-2 w-full rounded-2xl py-3 text-sm font-bold text-[#0D1B2A] hover:bg-[#C9C6F0]">Voltar ao pedido</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
+  );
+}
+
+function isPaymentResponse(value: unknown): value is { orderNsu: string; paymentUrl: string } {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    "orderNsu" in value &&
+    "paymentUrl" in value &&
+    typeof value.orderNsu === "string" &&
+    typeof value.paymentUrl === "string"
   );
 }

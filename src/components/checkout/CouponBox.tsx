@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { SellerSlug } from "@/types/checkout";
 
-type Props = { seller: SellerSlug; applied: boolean; onApply: (applied: boolean) => void };
+type Props = { seller: SellerSlug; applied: boolean; onApply: (applied: boolean, code: string) => void };
 
 export function CouponBox({ seller, applied, onApply }: Props) {
   const [code, setCode] = useState("");
@@ -10,7 +10,7 @@ export function CouponBox({ seller, applied, onApply }: Props) {
   const apply = () => {
     const expected = `${seller.toUpperCase()}10`;
     const valid = code.trim().toUpperCase() === expected;
-    onApply(valid);
+    onApply(valid, code.trim().toUpperCase());
     setMessage(valid ? "Cupom aplicado. Seu desconto de 10% já está no resumo!" : "Não encontramos esse cupom para este atendimento. Confira o código com seu vendedor.");
   };
   return (
