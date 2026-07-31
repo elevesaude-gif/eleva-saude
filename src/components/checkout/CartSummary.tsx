@@ -46,7 +46,7 @@ export function CartSummary({ items, subtotal, sellerName, onContinue, onAdd, on
         <div className="flex items-end justify-between border-t border-[#E6E8ED] pt-3"><span className="font-bold text-[#0D1B2A]">Total parcial</span><strong className="text-2xl tracking-[-.04em] text-[#0D1B2A]">{formatCurrency(subtotal)}</strong></div>
       </div>
       <button type="button" disabled={!items.length} onClick={onContinue} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0D1B2A] px-5 py-4 text-sm font-bold text-white shadow-[0_10px_22px_rgba(13,27,42,.22)] transition hover:bg-[#344563] hover:ring-4 hover:ring-[#C9C6F0] disabled:bg-[#E6E8ED] disabled:text-[#344563] disabled:shadow-none">
-        Continuar <span aria-hidden>→</span>
+        {items.length ? <><span>Continuar</span><span aria-hidden>→</span></> : "Adicione um item para continuar"}
       </button>
       <p className="mt-3 rounded-full bg-[#C9C6F0] px-3 py-2 text-center text-[10px] font-semibold text-[#0D1B2A]">✓ Pagamento seguro · Você revisará tudo antes</p>
     </aside>

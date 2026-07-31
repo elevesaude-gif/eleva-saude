@@ -52,9 +52,9 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
             <section className="relative mb-8 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#0D1B2A] via-[#344563] to-[#0D1B2A] px-5 py-7 text-white shadow-[0_18px_50px_rgba(13,27,42,.2)] sm:px-9 sm:py-8">
               <span className="absolute -right-16 -top-24 size-64 rounded-full border-[45px] border-[#C9C6F0]/10" />
               <span className="absolute -bottom-24 right-28 size-48 rounded-full bg-[#C9C6F0]/15 blur-2xl" />
-              <BrandLogo negative className="absolute right-8 top-4 hidden opacity-80 sm:block" />
-              <div className="relative max-w-2xl">
-                <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[.2em] text-[#C9C6F0]">Ambiente privado de fechamento</p>
+              <div className="relative flex max-w-2xl flex-col items-start">
+                <BrandLogo negative size="small" className="mb-3" />
+                <p className="mb-4 text-[10px] font-extrabold uppercase tracking-[.2em] text-[#C9C6F0]">Ambiente privado de fechamento</p>
                 <h1 className="font-serif text-[29px] font-semibold leading-[1.08] tracking-[-.025em] sm:text-[38px]">Finalize seu pedido com a eLeve Saúde</h1>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">Ambiente seguro para concluir o pedido orientado pela nossa equipe.</p>
                 <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#C9C6F0] px-3 py-2 text-[11px] font-bold text-[#0D1B2A]">

@@ -14,7 +14,7 @@ export function ProductCard({ product, quantity, onAdd, onRemove }: Props) {
       </div>
       <div className="flex flex-1 flex-col px-2 pb-1 pt-4">
         <span className="mb-2 text-[9px] font-extrabold uppercase tracking-[.16em] text-[#344563]">{product.category}</span>
-        <h3 className="text-[17px] font-bold leading-tight tracking-[-.01em] text-[#0D1B2A]">{product.name}</h3>
+        <h3 className="min-h-11 text-[17px] font-bold leading-tight tracking-[-.01em] text-[#0D1B2A]">{product.name}</h3>
         <p className="mt-2 flex-1 text-[13px] leading-5 text-[#344563]">{product.description}</p>
         <div className="mt-5">
           <span className="text-[10px] font-semibold uppercase tracking-wide text-[#344563]">Investimento</span>
