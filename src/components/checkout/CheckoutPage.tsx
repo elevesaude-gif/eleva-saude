@@ -104,7 +104,7 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
               <aside className="overflow-hidden rounded-[28px] border border-[#E6E8ED] bg-white shadow-[0_18px_55px_rgba(13,27,42,.09)] lg:sticky lg:top-28">
                 <div className="bg-[#0D1B2A] p-5 text-white">
                   <p className="text-[9px] font-bold uppercase tracking-[.16em] text-[#C9C6F0]">Pagamento seguro</p>
-                  <div className="mt-1 flex items-center justify-between"><h2 className="text-xl font-bold">Total do pedido</h2><span className="rounded-full bg-[#C9C6F0] px-2.5 py-1 text-[10px] text-[#0D1B2A]">Protegido</span></div>
+                  <div className="mt-1 flex items-center justify-between"><h2 className="text-xl font-bold">Total do pedido</h2><span className="rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2.5 py-1 text-[10px] font-semibold text-[#047857]">✓ Protegido</span></div>
                   <p className="mt-2 text-xs text-white/70">Atendimento personalizado com <strong className="text-white">{sellers[seller]}</strong></p>
                 </div>
                 <div className="p-5">
@@ -117,8 +117,8 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
                   <div className="my-5 h-px bg-[#E6E8ED]" />
                   <div className="flex items-end justify-between"><div><span className="text-xs font-semibold text-[#344563]">Total a pagar</span><p className="text-[10px] text-[#344563]">em ambiente seguro</p></div><strong className="text-3xl tracking-[-.05em] text-[#0D1B2A]">{formatCurrency(total)}</strong></div>
                   <p className="mt-4 text-center text-[11px] leading-5 text-[#344563]">Você será direcionado para o ambiente seguro da InfinitePay.</p>
-                  <button type="button" onClick={finish} className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0D1B2A] px-4 py-4 text-sm font-bold text-white shadow-[0_10px_22px_rgba(13,27,42,.22)] transition hover:bg-[#344563] hover:ring-4 hover:ring-[#C9C6F0]">Finalizar no pagamento seguro <span>→</span></button>
-                  <div className="mt-4 flex items-center justify-center gap-2 rounded-full bg-[#C9C6F0]/45 px-3 py-2 text-[10px] font-semibold text-[#0D1B2A]">✓ Seus dados estão protegidos</div>
+                  <button type="button" onClick={finish} className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#047857] px-4 py-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(4,120,87,.28)] transition hover:bg-[#065F46]">Finalizar no pagamento seguro <span>→</span></button>
+                  <div className="mt-4 flex items-center justify-center gap-2 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-3 py-2 text-[10px] font-semibold text-[#047857]">✓ Seus dados estão protegidos</div>
                 </div>
               </aside>
             </div>
@@ -148,7 +148,7 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
                 <div className="rounded-2xl bg-[#F7F8FA] p-4"><span className="text-[9px] font-bold uppercase tracking-wider text-[#344563]">Vendedor(a)</span><strong className="mt-1 block text-base text-[#0D1B2A]">{sellers[seller]}</strong></div>
               </div>
               <p className="mt-5 text-center text-sm leading-6 text-[#344563]">Na próxima etapa, este botão criará automaticamente um checkout seguro na InfinitePay usando a InfiniteTag <strong className="break-all text-[#0D1B2A]">stefane-santos-518</strong>.</p>
-              <button type="button" onClick={() => setReady(false)} className="mt-6 w-full rounded-2xl bg-[#0D1B2A] py-3.5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(13,27,42,.2)] hover:bg-[#344563] hover:ring-4 hover:ring-[#C9C6F0]">Entendi</button>
+              <button type="button" onClick={() => setReady(false)} className="mt-6 w-full rounded-2xl bg-[#047857] py-3.5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(4,120,87,.2)] hover:bg-[#065F46]">Entendi</button>
               <button type="button" onClick={() => setReady(false)} className="mt-2 w-full rounded-2xl py-3 text-sm font-bold text-[#0D1B2A] hover:bg-[#C9C6F0]">Voltar ao pedido</button>
             </div>
           </div>

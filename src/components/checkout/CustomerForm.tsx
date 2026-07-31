@@ -3,7 +3,7 @@ import type { CustomerData } from "@/types/checkout";
 
 type Props = { data: CustomerData; onChange: (data: CustomerData) => void };
 
-const fieldClass = "peer mt-2 w-full rounded-[14px] border border-[#E6E8ED] bg-[#F7F8FA] px-4 py-3.5 text-sm text-[#0D1B2A] outline-none transition placeholder:text-[#344563]/55 hover:border-[#C9C6F0] focus:border-[#C9C6F0] focus:bg-white focus:ring-4 focus:ring-[#C9C6F0]/50 invalid:not-placeholder-shown:border-[#344563]";
+const fieldClass = "peer mt-2 w-full rounded-[14px] border border-[#E6E8ED] bg-[#F7F8FA] px-4 py-3.5 text-sm text-[#0D1B2A] outline-none transition placeholder:text-[#344563]/55 hover:border-[#C9C6F0] focus:border-[#C9C6F0] focus:bg-white focus:ring-4 focus:ring-[#C9C6F0]/50 invalid:not-placeholder-shown:border-[#B42318] invalid:not-placeholder-shown:bg-[#FEF3F2]";
 const digits = (value: string) => value.replace(/\D/g, "");
 const maskCpf = (value: string) => digits(value).slice(0, 11).replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 const maskPhone = (value: string) => digits(value).slice(0, 11).replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
@@ -31,6 +31,7 @@ export function CustomerForm({ data, onChange }: Props) {
     placeholder: string,
     props?: { required?: boolean; type?: string; inputMode?: "text" | "numeric" | "email"; pattern?: string; autoComplete?: string; hint?: string },
   ) => {
+    const successHint = name === "zipCode" && digits(data.zipCode) === "05388090";
     const invalid = (event: FormEvent<HTMLInputElement>) => {
       const input = event.currentTarget;
       input.setCustomValidity(input.validity.valueMissing ? `Preencha o campo ${label.toLowerCase()}.` : `Confira o formato de ${label.toLowerCase()}.`);
@@ -39,7 +40,7 @@ export function CustomerForm({ data, onChange }: Props) {
       <label className="block text-xs font-bold text-[#0D1B2A]">
         {label}{props?.required && <span className="ml-0.5 text-[#344563]">*</span>}
         <input className={fieldClass} name={name} value={data[name]} onChange={update} onInvalid={invalid} onInput={(e) => e.currentTarget.setCustomValidity("")} placeholder={placeholder} {...props} />
-        {props?.hint && <span className="mt-1.5 block text-[10px] font-normal text-[#344563]">{props.hint}</span>}
+        {props?.hint && <span className={`mt-1.5 block text-[10px] font-normal ${successHint ? "rounded-lg border border-[#A7F3D0] bg-[#ECFDF5] px-2 py-1.5 text-[#047857]" : "text-[#344563]"}`}>{successHint && "✓ "}{props.hint}</span>}
       </label>
     );
   };

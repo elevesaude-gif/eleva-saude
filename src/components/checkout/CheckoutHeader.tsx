@@ -8,7 +8,7 @@ export function CheckoutHeader({ sellerName }: Props) {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
         <BrandLogo size="large" />
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden items-center gap-2 rounded-full bg-[#C9C6F0] px-3 py-2 text-xs font-bold text-[#0D1B2A] sm:flex">
+          <div className="hidden items-center gap-2 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-3 py-2 text-xs font-bold text-[#047857] sm:flex">
             <span aria-hidden>✓</span> Pagamento seguro
           </div>
           <div className="rounded-xl border border-[#E6E8ED] bg-[#F7F8FA] px-3 py-2 text-right sm:rounded-2xl sm:px-4">

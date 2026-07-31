@@ -21,7 +21,7 @@ export function ProductCard({ product, quantity, onAdd, onRemove }: Props) {
           <strong className="block text-xl tracking-[-.03em] text-[#0D1B2A]">{formatCurrency(product.price)}</strong>
         </div>
         {quantity === 0 ? (
-          <button type="button" onClick={onAdd} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0D1B2A] py-2.5 text-sm font-bold text-white transition hover:bg-[#344563] hover:ring-4 hover:ring-[#C9C6F0]">
+          <button type="button" onClick={onAdd} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#047857] py-2.5 text-sm font-bold text-white shadow-[0_6px_16px_rgba(4,120,87,.16)] transition hover:bg-[#065F46]">
             <span className="text-lg leading-none">+</span> Adicionar ao pedido
           </button>
         ) : (

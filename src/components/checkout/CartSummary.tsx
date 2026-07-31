@@ -45,10 +45,10 @@ export function CartSummary({ items, subtotal, sellerName, onContinue, onAdd, on
         <div className="flex justify-between"><span className="text-[#344563]">Frete</span><span className="text-[#344563]">Na próxima etapa</span></div>
         <div className="flex items-end justify-between border-t border-[#E6E8ED] pt-3"><span className="font-bold text-[#0D1B2A]">Total parcial</span><strong className="text-2xl tracking-[-.04em] text-[#0D1B2A]">{formatCurrency(subtotal)}</strong></div>
       </div>
-      <button type="button" disabled={!items.length} onClick={onContinue} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0D1B2A] px-5 py-4 text-sm font-bold text-white shadow-[0_10px_22px_rgba(13,27,42,.22)] transition hover:bg-[#344563] hover:ring-4 hover:ring-[#C9C6F0] disabled:bg-[#E6E8ED] disabled:text-[#344563] disabled:shadow-none">
+      <button type="button" disabled={!items.length} onClick={onContinue} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#047857] px-5 py-4 text-sm font-bold text-white shadow-[0_10px_22px_rgba(4,120,87,.22)] transition hover:bg-[#065F46] disabled:bg-[#E6E8ED] disabled:text-[#344563] disabled:shadow-none">
         {items.length ? <><span>Continuar</span><span aria-hidden>→</span></> : "Adicione um item para continuar"}
       </button>
-      <p className="mt-3 rounded-full bg-[#C9C6F0] px-3 py-2 text-center text-[10px] font-semibold text-[#0D1B2A]">✓ Pagamento seguro · Você revisará tudo antes</p>
+      <p className="mt-3 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-3 py-2 text-center text-[10px] font-semibold text-[#047857]">✓ Pagamento seguro · Você revisará tudo antes</p>
     </aside>
   );
 }
@@ -59,7 +59,9 @@ export function MobileCartBar({ items, subtotal, onContinue }: Pick<Props, "item
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E6E8ED] bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_35px_rgba(13,27,42,.1)] backdrop-blur-xl lg:hidden">
       <div className="mx-auto flex max-w-xl items-center gap-3">
         <div className="min-w-0 flex-1"><p className="text-[10px] font-bold uppercase tracking-wider text-[#344563]">{count} {count === 1 ? "item" : "itens"}</p><p className="truncate text-lg font-extrabold tracking-[-.03em] text-[#0D1B2A]">{formatCurrency(subtotal)}</p></div>
-        <button type="button" disabled={!items.length} onClick={onContinue} className="rounded-2xl bg-[#0D1B2A] px-5 py-3.5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(13,27,42,.2)] hover:bg-[#344563] disabled:bg-[#E6E8ED] disabled:text-[#344563]">Continuar <span aria-hidden>→</span></button>
+        <button type="button" disabled={!items.length} onClick={onContinue} className="rounded-2xl bg-[#047857] px-5 py-3.5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(4,120,87,.2)] transition hover:bg-[#065F46] disabled:bg-[#E6E8ED] disabled:text-[#344563] disabled:shadow-none">
+          {items.length ? <><span>Continuar</span><span aria-hidden>→</span></> : "Adicione um item para continuar"}
+        </button>
       </div>
     </div>
   );
