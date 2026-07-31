@@ -9,8 +9,16 @@ export function generateStaticParams() {
   return validSellers.map((seller) => ({ seller }));
 }
 
-export default async function SellerPage({ params }: { params: Promise<{ seller: string }> }) {
+export default async function SellerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ seller: string }>;
+  searchParams: Promise<{ teste?: string | string[] }>;
+}) {
   const { seller } = await params;
+  const query = await searchParams;
+  const testMode = query.teste === "1";
 
   if (!validSellers.includes(seller as SellerSlug)) {
     return (
@@ -29,5 +37,5 @@ export default async function SellerPage({ params }: { params: Promise<{ seller:
     );
   }
 
-  return <CheckoutPage seller={seller as SellerSlug} />;
+  return <CheckoutPage key={testMode ? "test" : "normal"} seller={seller as SellerSlug} testMode={testMode} />;
 }

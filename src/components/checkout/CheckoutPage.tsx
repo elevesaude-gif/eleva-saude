@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
-import { products, sellers, shippingOptions } from "@/lib/mock-data";
+import { internalTestProduct, internalTestShippingOption, products, sellers, shippingOptions } from "@/lib/mock-data";
 import type { Category, CustomerData, SellerSlug } from "@/types/checkout";
 import { CartSummary, MobileCartBar } from "./CartSummary";
 import { CategoryTabs } from "./CategoryTabs";
@@ -19,7 +19,7 @@ const emptyCustomer: CustomerData = {
   complement: "", neighborhood: "", city: "", state: "", reference: "",
 };
 
-export function CheckoutPage({ seller }: { seller: SellerSlug }) {
+export function CheckoutPage({ seller, testMode }: { seller: SellerSlug; testMode: boolean }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [category, setCategory] = useState<"Todos" | Category>("Todos");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -29,14 +29,16 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
   const [couponCode, setCouponCode] = useState("");
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const availableProducts = useMemo(() => testMode ? [...products, internalTestProduct] : products, [testMode]);
+  const availableShippingOptions = useMemo(() => testMode ? [internalTestShippingOption, ...shippingOptions] : shippingOptions, [testMode]);
 
-  const items = products.filter((product) => quantities[product.id]).map((product) => ({ ...product, quantity: quantities[product.id] }));
+  const items = availableProducts.filter((product) => quantities[product.id]).map((product) => ({ ...product, quantity: quantities[product.id] }));
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = shippingOptions.find((option) => option.id === shippingId)!;
+  const shipping = availableShippingOptions.find((option) => option.id === shippingId)!;
   const discount = couponApplied ? subtotal * 0.1 : 0;
   const total = subtotal - discount + shipping.price;
-  const filtered = useMemo(() => category === "Todos" ? products : products.filter((product) => product.category === category), [category]);
+  const filtered = useMemo(() => category === "Todos" ? availableProducts : availableProducts.filter((product) => product.category === category), [availableProducts, category]);
   const setQuantity = (id: string, delta: number) => setQuantities((current) => ({ ...current, [id]: Math.max(0, (current[id] ?? 0) + delta) }));
   const goToSummary = () => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const finish = async () => {
@@ -56,6 +58,7 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
           shippingId,
           couponCode: couponApplied ? couponCode : undefined,
           totalCents: Math.round(total * 100),
+          testMode,
         }),
       });
       const responseText = await response.text();
@@ -106,7 +109,7 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
             </section>
             <div className="mb-6 flex items-end justify-between gap-4">
               <div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#344563]">Recomendados no atendimento</p><h2 className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#0D1B2A]">Itens disponíveis para seu pedido</h2></div>
-              <span className="hidden text-xs text-[#344563] sm:block">{products.length} opções orientadas pela equipe</span>
+              <span className="hidden text-xs text-[#344563] sm:block">{availableProducts.length} opções orientadas pela equipe</span>
             </div>
             <CategoryTabs active={category} onChange={setCategory} />
             <div className="mt-7 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -140,7 +143,7 @@ export function CheckoutPage({ seller }: { seller: SellerSlug }) {
                   </div>
                 </section>
                 <CustomerForm data={customer} onChange={setCustomer} />
-                <ShippingOptions selected={shippingId} onSelect={setShippingId} />
+                <ShippingOptions options={availableShippingOptions} selected={shippingId} onSelect={setShippingId} />
                 <CouponBox seller={seller} applied={couponApplied} onApply={(applied, code) => { setCouponApplied(applied); setCouponCode(code); }} />
               </div>
               <aside className="overflow-hidden rounded-[28px] border border-[#E6E8ED] bg-white shadow-[0_18px_55px_rgba(13,27,42,.09)] lg:sticky lg:top-28">

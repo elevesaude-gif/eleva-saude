@@ -3,7 +3,7 @@ import {
   InfinitePayError,
   type InfinitePayItem,
 } from "@/lib/infinitepay";
-import { products, sellers, shippingOptions } from "@/lib/mock-data";
+import { internalTestProduct, internalTestShippingOption, products, sellers, shippingOptions } from "@/lib/mock-data";
 import { createOrderWithItems, recordCheckoutFailure, updateOrderPaymentUrl } from "@/lib/orders";
 import type { CustomerData, SellerSlug } from "@/types/checkout";
 import { NextResponse } from "next/server";
@@ -18,6 +18,7 @@ type CheckoutRequest = {
   shippingId: string;
   couponCode?: string;
   totalCents: number;
+  testMode?: boolean;
 };
 
 export async function POST(request: Request) {
@@ -34,10 +35,12 @@ export async function POST(request: Request) {
     }
     debugInfo("2. validação concluída");
 
+    const availableProducts = input.testMode ? [...products, internalTestProduct] : products;
+    const availableShippingOptions = input.testMode ? [internalTestShippingOption, ...shippingOptions] : shippingOptions;
     const canonicalLines = input.items.map((requestedItem) => {
-      const product = products.find((candidate) => candidate.id === requestedItem.id);
+      const product = availableProducts.find((candidate) => candidate.id === requestedItem.id);
       if (!product) throw new InvalidCheckoutError("Produto inválido.");
-      const unitPriceCents = Math.round(product.price * 100);
+      const unitPriceCents = product.priceCents ?? Math.round(product.price * 100);
       return {
         productId: product.id,
         description: product.name,
@@ -47,7 +50,7 @@ export async function POST(request: Request) {
       };
     });
 
-    const shipping = shippingOptions.find((option) => option.id === input.shippingId);
+    const shipping = availableShippingOptions.find((option) => option.id === input.shippingId);
     if (!shipping) throw new InvalidCheckoutError("Frete inválido.");
 
     const subtotalCents = canonicalLines.reduce((sum, line) => sum + line.lineTotalCents, 0);
@@ -107,7 +110,7 @@ export async function POST(request: Request) {
     });
 
     const paymentItems = buildPaymentItems(canonicalLines, discountCents, subtotalCents);
-    paymentItems.push({ description: `Frete - ${shipping.name}`, quantity: 1, price: shippingCents });
+    if (shippingCents > 0) paymentItems.push({ description: `Frete - ${shipping.name}`, quantity: 1, price: shippingCents });
     stage = "infinitepay";
     debugInfo("8. criando checkout InfinitePay");
     const paymentUrl = await createInfinitePayCheckout({
@@ -179,11 +182,12 @@ function isCheckoutRequest(value: unknown): value is CheckoutRequest {
   const input = value as Partial<CheckoutRequest>;
   return (
     (input.seller === "isabela" || input.seller === "caio") && Array.isArray(input.items) && input.items.length > 0 &&
-    input.items.length <= products.length && input.items.every((item) => Boolean(item && typeof item.id === "string" &&
+    input.items.length <= products.length + (input.testMode ? 1 : 0) && input.items.every((item) => Boolean(item && typeof item.id === "string" &&
       Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 99)) &&
     new Set(input.items.map((item) => item.id)).size === input.items.length && Boolean(input.customer && hasRequiredCustomerData(input.customer)) &&
     typeof input.shippingId === "string" && (input.couponCode === undefined || typeof input.couponCode === "string") &&
-    Number.isInteger(input.totalCents) && Number(input.totalCents) > 0
+    Number.isInteger(input.totalCents) && Number(input.totalCents) > 0 &&
+    (input.testMode === undefined || typeof input.testMode === "boolean")
   );
 }
 

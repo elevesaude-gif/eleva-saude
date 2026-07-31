@@ -7,6 +7,7 @@ export type Product = {
   name: string;
   description: string;
   price: number;
+  priceCents?: number;
   category: Category;
   icon: string;
   accent: string;
@@ -19,6 +20,7 @@ export type ShippingOption = {
   name: string;
   price: number;
   estimate: string;
+  description?: string;
 };
 
 export type CustomerData = {
