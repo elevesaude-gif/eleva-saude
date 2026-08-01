@@ -38,5 +38,5 @@ export default async function SellerPage({
     );
   }
 
-  return <CheckoutPage key={testMode ? "test" : "normal"} seller={seller as SellerSlug} testMode={testMode} />;
+  return <CheckoutPage key={testMode ? "test" : "normal"} seller={seller as SellerSlug} testMode={testMode} testToken={testMode && typeof query.token === "string" ? query.token : undefined} />;
 }

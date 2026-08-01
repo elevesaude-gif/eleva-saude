@@ -11,15 +11,23 @@ export type Product = {
   category: Category;
   icon: string;
   accent: string;
+  weightGrams: number;
+  heightCm: number;
+  widthCm: number;
+  lengthCm: number;
+  requiresShipping: boolean;
 };
 
 export type CartItem = Product & { quantity: number };
 
 export type ShippingOption = {
   id: string;
-  name: string;
-  price: number;
-  estimate: string;
+  provider: string;
+  service: string;
+  priceCents: number;
+  deliveryTime: string;
+  source: "melhor_envio" | "fallback" | "teste" | "digital";
+  quoteToken?: string;
   description?: string;
 };
 

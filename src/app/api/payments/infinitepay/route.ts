@@ -3,8 +3,9 @@ import {
   InfinitePayError,
   type InfinitePayItem,
 } from "@/lib/infinitepay";
-import { internalTestProduct, internalTestShippingOption, products, sellers, shippingOptions } from "@/lib/mock-data";
+import { internalTestProduct, products, sellers } from "@/lib/mock-data";
 import { createOrderWithItems, recordCheckoutFailure, updateOrderPaymentUrl } from "@/lib/orders";
+import { getShippingQuotes, verifySealedShippingQuote } from "@/lib/shipping";
 import type { CustomerData, SellerSlug } from "@/types/checkout";
 import { NextResponse } from "next/server";
 
@@ -16,9 +17,10 @@ type CheckoutRequest = {
   customer: CustomerData;
   seller: SellerSlug;
   shippingId: string;
+  shippingQuoteToken?: string;
   couponCode?: string;
   totalCents: number;
-  testMode?: boolean;
+  testToken?: string;
 };
 
 export async function POST(request: Request) {
@@ -35,8 +37,8 @@ export async function POST(request: Request) {
     }
     debugInfo("2. validação concluída");
 
-    const availableProducts = input.testMode ? [...products, internalTestProduct] : products;
-    const availableShippingOptions = input.testMode ? [internalTestShippingOption, ...shippingOptions] : shippingOptions;
+    const allowTestProduct = Boolean(process.env.TEST_PRODUCT_TOKEN) && input.testToken === process.env.TEST_PRODUCT_TOKEN;
+    const availableProducts = allowTestProduct ? [...products, internalTestProduct] : products;
     const canonicalLines = input.items.map((requestedItem) => {
       const product = availableProducts.find((candidate) => candidate.id === requestedItem.id);
       if (!product) throw new InvalidCheckoutError("Produto inválido.");
@@ -50,14 +52,25 @@ export async function POST(request: Request) {
       };
     });
 
-    const shipping = availableShippingOptions.find((option) => option.id === input.shippingId);
-    if (!shipping) throw new InvalidCheckoutError("Frete inválido.");
-
     const subtotalCents = canonicalLines.reduce((sum, line) => sum + line.lineTotalCents, 0);
+    const shippingOptions = await getShippingQuotes({
+      postalCode: input.customer.zipCode,
+      items: input.items,
+      subtotalCents,
+      allowTestProduct,
+    });
+    const sealedShipping = verifySealedShippingQuote(input.shippingQuoteToken, {
+      postalCode: input.customer.zipCode,
+      items: input.items,
+      subtotalCents,
+    });
+    const shipping = sealedShipping?.id === input.shippingId ? sealedShipping : shippingOptions.find((option) => option.id === input.shippingId);
+    if (!shipping || shipping.id !== input.shippingId) throw new InvalidCheckoutError("Frete inválido.");
+
     const normalizedCoupon = input.couponCode?.trim().toUpperCase();
     const couponIsValid = normalizedCoupon === `${input.seller.toUpperCase()}10`;
     const discountCents = couponIsValid ? Math.round(subtotalCents * 0.1) : 0;
-    const shippingCents = Math.round(shipping.price * 100);
+    const shippingCents = shipping.priceCents;
     const totalCents = subtotalCents - discountCents + shippingCents;
 
     if (input.totalCents !== totalCents) {
@@ -91,9 +104,12 @@ export async function POST(request: Request) {
       shippingCents,
       totalCents,
       shippingId: shipping.id,
-      shippingCompany: shipping.name,
-      shippingService: shipping.name,
-      shippingDeadline: shipping.estimate,
+      shippingCompany: shipping.provider,
+      shippingService: shipping.service,
+      shippingDeadline: shipping.deliveryTime,
+      shippingQuoteSource: shipping.source,
+      shippingDeliveryTime: shipping.deliveryTime,
+      shippingServiceId: shipping.id,
       couponCode: couponIsValid ? normalizedCoupon : undefined,
       rawCheckoutPayload: sanitizedPayload,
       items: canonicalLines.map((line) => ({
@@ -110,7 +126,7 @@ export async function POST(request: Request) {
     });
 
     const paymentItems = buildPaymentItems(canonicalLines, discountCents, subtotalCents);
-    if (shippingCents > 0) paymentItems.push({ description: `Frete - ${shipping.name}`, quantity: 1, price: shippingCents });
+    if (shippingCents > 0) paymentItems.push({ description: `Frete - ${shipping.provider} ${shipping.service}`, quantity: 1, price: shippingCents });
     stage = "infinitepay";
     debugInfo("8. criando checkout InfinitePay");
     const paymentUrl = await createInfinitePayCheckout({
@@ -182,12 +198,13 @@ function isCheckoutRequest(value: unknown): value is CheckoutRequest {
   const input = value as Partial<CheckoutRequest>;
   return (
     (input.seller === "isabela" || input.seller === "caio") && Array.isArray(input.items) && input.items.length > 0 &&
-    input.items.length <= products.length + (input.testMode ? 1 : 0) && input.items.every((item) => Boolean(item && typeof item.id === "string" &&
+    input.items.length <= products.length + 1 && input.items.every((item) => Boolean(item && typeof item.id === "string" &&
       Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 99)) &&
     new Set(input.items.map((item) => item.id)).size === input.items.length && Boolean(input.customer && hasRequiredCustomerData(input.customer)) &&
-    typeof input.shippingId === "string" && (input.couponCode === undefined || typeof input.couponCode === "string") &&
+    typeof input.shippingId === "string" && (input.shippingQuoteToken === undefined || typeof input.shippingQuoteToken === "string") &&
+    (input.couponCode === undefined || typeof input.couponCode === "string") &&
     Number.isInteger(input.totalCents) && Number(input.totalCents) > 0 &&
-    (input.testMode === undefined || typeof input.testMode === "boolean")
+    (input.testToken === undefined || typeof input.testToken === "string")
   );
 }
 
@@ -206,7 +223,9 @@ function sanitizeCheckoutRequest(value: unknown) {
   if (!value || typeof value !== "object") return value;
   const body = value as Record<string, unknown>;
   const customer = body.customer && typeof body.customer === "object" ? body.customer as Record<string, unknown> : undefined;
-  return { ...body, ...(customer ? { customer: { ...customer, cpf: maskValue(String(customer.cpf || ""), 2), whatsapp: maskValue(String(customer.whatsapp || ""), 4), email: maskEmail(String(customer.email || "")) } } : {}) };
+  const safeBody = { ...body };
+  delete safeBody.testToken;
+  return { ...safeBody, ...(customer ? { customer: { ...customer, cpf: maskValue(String(customer.cpf || ""), 2), whatsapp: maskValue(String(customer.whatsapp || ""), 4), email: maskEmail(String(customer.email || "")) } } : {}) };
 }
 
 function safeErrorForStorage(error: unknown) {

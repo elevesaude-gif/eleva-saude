@@ -36,6 +36,9 @@ export type CreateOrderInput = {
   shippingCompany?: string;
   shippingService: string;
   shippingDeadline?: string;
+  shippingQuoteSource?: string;
+  shippingDeliveryTime?: string;
+  shippingServiceId?: string;
   couponCode?: string;
   rawCheckoutPayload: unknown;
   items: OrderItemInput[];
@@ -101,6 +104,9 @@ export async function createOrderWithItems(
       shipping_company: input.shippingCompany || null,
       shipping_service: input.shippingService,
       shipping_deadline: input.shippingDeadline || null,
+      shipping_quote_source: input.shippingQuoteSource || null,
+      shipping_delivery_time: input.shippingDeliveryTime || null,
+      shipping_service_id: input.shippingServiceId || null,
       coupon_code: input.couponCode || null,
       payment_status: "pending",
       fulfillment_status: "pending",

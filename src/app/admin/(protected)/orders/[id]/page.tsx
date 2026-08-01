@@ -54,7 +54,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
               <Money label="Frete" cents={order.shipping_cents} />
               <div className="border-t border-[#E6E8ED] pt-3"><Money label="Total" cents={order.total_cents} strong /></div>
             </dl>
-            <div className="mt-4 rounded-xl bg-[#F7F8FA] p-3 text-xs text-[#344563]"><strong className="block text-[#0D1B2A]">{order.shipping_service}</strong><span>{order.shipping_company ?? order.shipping_id}{order.shipping_deadline ? ` · ${order.shipping_deadline}` : ""}</span></div>
+            <div className="mt-4 rounded-xl bg-[#F7F8FA] p-3 text-xs text-[#344563]"><strong className="block text-[#0D1B2A]">{order.shipping_service}</strong><span>{order.shipping_company ?? order.shipping_id}{order.shipping_deadline ? ` · ${order.shipping_deadline}` : ""}</span>{order.shipping_quote_source && <span className="mt-2 block font-bold text-[#0D1B2A]">Origem: {shippingSourceLabel(order.shipping_quote_source)}</span>}</div>
           </Card>
 
           <Card title="Status operacional">
@@ -95,3 +95,4 @@ function Badge({ value }: { value: string }) { return <span className="rounded-f
 function statusLabel(status: string) { return ({ pending: "Pendente", paid: "Pago", awaiting_payment: "Aguardando pagamento", paid_not_fulfilled: "Pago / a preparar", in_preparation: "Em preparação", shipped: "Enviado", completed: "Concluído", canceled: "Cancelado" } as Record<string, string>)[status] ?? status; }
 function formatDate(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
 function safeHttpsUrl(value: string | null) { if (!value) return undefined; try { const url = new URL(value); return url.protocol === "https:" ? url.toString() : undefined; } catch { return undefined; } }
+function shippingSourceLabel(source: string) { return ({ melhor_envio: "Melhor Envio", fallback: "Fallback", teste: "Teste", digital: "Digital / sem frete" } as Record<string, string>)[source] ?? source; }

@@ -39,6 +39,9 @@ export type AdminOrder = {
   shipping_company: string | null;
   shipping_service: string;
   shipping_deadline: string | null;
+  shipping_quote_source: string | null;
+  shipping_delivery_time: string | null;
+  shipping_service_id: string | null;
   coupon_code: string | null;
   payment_status: string;
   fulfillment_status: string;
@@ -68,7 +71,7 @@ export type AdminPaymentEvent = {
   created_at: string;
 };
 
-const orderColumns = "id,order_nsu,seller_slug,seller_name,customer_name,customer_cpf,customer_phone,customer_email,postal_code,street,address_number,complement,neighborhood,city,state,reference,subtotal_cents,discount_cents,shipping_cents,total_cents,shipping_id,shipping_company,shipping_service,shipping_deadline,coupon_code,payment_status,fulfillment_status,payment_url,transaction_nsu,receipt_url,capture_method,paid_amount_cents,created_at,paid_at";
+const orderColumns = "id,order_nsu,seller_slug,seller_name,customer_name,customer_cpf,customer_phone,customer_email,postal_code,street,address_number,complement,neighborhood,city,state,reference,subtotal_cents,discount_cents,shipping_cents,total_cents,shipping_id,shipping_company,shipping_service,shipping_deadline,shipping_quote_source,shipping_delivery_time,shipping_service_id,coupon_code,payment_status,fulfillment_status,payment_url,transaction_nsu,receipt_url,capture_method,paid_amount_cents,created_at,paid_at";
 
 export async function getAdminDashboard(filter: AdminFilter, search: string) {
   const supabase = getSupabaseServerClient();

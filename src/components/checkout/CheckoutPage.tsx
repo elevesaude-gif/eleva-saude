@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
-import { internalTestProduct, internalTestShippingOption, products, sellers, shippingOptions } from "@/lib/mock-data";
-import type { Category, CustomerData, SellerSlug } from "@/types/checkout";
+import { digitalShippingOption, internalTestProduct, internalTestShippingOption, products, sellers } from "@/lib/mock-data";
+import type { Category, CustomerData, SellerSlug, ShippingOption } from "@/types/checkout";
 import { CartSummary, MobileCartBar } from "./CartSummary";
 import { CategoryTabs } from "./CategoryTabs";
 import { CheckoutHeader } from "./CheckoutHeader";
@@ -19,31 +19,76 @@ const emptyCustomer: CustomerData = {
   complement: "", neighborhood: "", city: "", state: "", reference: "",
 };
 
-export function CheckoutPage({ seller, testMode }: { seller: SellerSlug; testMode: boolean }) {
+export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSlug; testMode: boolean; testToken?: string }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [category, setCategory] = useState<"Todos" | Category>("Todos");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [customer, setCustomer] = useState(emptyCustomer);
-  const [shippingId, setShippingId] = useState("jadlog");
+  const [shippingId, setShippingId] = useState("");
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+  const [isShippingLoading, setIsShippingLoading] = useState(false);
+  const [quotedPostalCode, setQuotedPostalCode] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const availableProducts = useMemo(() => testMode ? [...products, internalTestProduct] : products, [testMode]);
-  const availableShippingOptions = useMemo(() => testMode ? [internalTestShippingOption, ...shippingOptions] : shippingOptions, [testMode]);
 
-  const items = availableProducts.filter((product) => quantities[product.id]).map((product) => ({ ...product, quantity: quantities[product.id] }));
+  const items = useMemo(() => availableProducts.filter((product) => quantities[product.id]).map((product) => ({ ...product, quantity: quantities[product.id] })), [availableProducts, quantities]);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = availableShippingOptions.find((option) => option.id === shippingId)!;
   const discount = couponApplied ? subtotal * 0.1 : 0;
-  const total = subtotal - discount + shipping.price;
   const filtered = useMemo(() => category === "Todos" ? availableProducts : availableProducts.filter((product) => product.category === category), [availableProducts, category]);
   const setQuantity = (id: string, delta: number) => setQuantities((current) => ({ ...current, [id]: Math.max(0, (current[id] ?? 0) + delta) }));
   const goToSummary = () => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+  const quoteItems = useMemo(() => items.map((item) => ({ id: item.id, quantity: item.quantity })), [items]);
+  const hasShippableItems = items.some((item) => item.requiresShipping);
+  const postalCode = customer.zipCode.replace(/\D/g, "");
+  const validPostalCode = postalCode.length === 8;
+  const noShippingOption = testMode && items.some((item) => item.id === internalTestProduct.id) ? internalTestShippingOption : digitalShippingOption;
+  const effectiveShippingOptions = !hasShippableItems ? [noShippingOption] : validPostalCode && quotedPostalCode === postalCode ? shippingOptions : [];
+  const effectiveShippingId = !hasShippableItems ? noShippingOption.id : shippingId;
+  const shipping = effectiveShippingOptions.find((option) => option.id === effectiveShippingId);
+  const shippingLoading = hasShippableItems && validPostalCode && (isShippingLoading || quotedPostalCode !== postalCode);
+  const total = subtotal - discount + (shipping?.priceCents ?? 0) / 100;
+
+  useEffect(() => {
+    if (!items.length || !hasShippableItems || !validPostalCode) return;
+
+    const controller = new AbortController();
+    void (async () => {
+      await Promise.resolve();
+      if (controller.signal.aborted) return;
+      setIsShippingLoading(true);
+      setShippingOptions([]);
+      setShippingId("");
+      try {
+        const response = await fetch("/api/shipping/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ postalCode: customer.zipCode, items: quoteItems, subtotalCents: Math.round(subtotal * 100), testToken }),
+          signal: controller.signal,
+        });
+        const body: unknown = await response.json();
+        if (!response.ok || !isShippingResponse(body)) throw new Error("shipping_quote_failed");
+        setShippingOptions(body.options);
+        setShippingId(body.options[0]?.id ?? "");
+        setQuotedPostalCode(postalCode);
+      } catch (error: unknown) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setShippingOptions([]);
+        setShippingId("");
+      } finally {
+        if (!controller.signal.aborted) setIsShippingLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [customer.zipCode, hasShippableItems, items, postalCode, quoteItems, subtotal, testMode, testToken, validPostalCode]);
+
   const finish = async () => {
     const form = document.getElementById("checkout-form") as HTMLFormElement | null;
-    if (!form?.reportValidity() || isPaymentLoading) return;
+    if (!form?.reportValidity() || isPaymentLoading || shippingLoading || !shipping) return;
 
     setIsPaymentLoading(true);
     setPaymentError("");
@@ -55,10 +100,11 @@ export function CheckoutPage({ seller, testMode }: { seller: SellerSlug; testMod
           items: items.map((item) => ({ id: item.id, quantity: item.quantity })),
           customer,
           seller,
-          shippingId,
+          shippingId: effectiveShippingId,
+          shippingQuoteToken: shipping.quoteToken,
           couponCode: couponApplied ? couponCode : undefined,
           totalCents: Math.round(total * 100),
-          testMode,
+          testToken,
         }),
       });
       const responseText = await response.text();
@@ -68,20 +114,11 @@ export function CheckoutPage({ seller, testMode }: { seller: SellerSlug; testMod
       } catch {
         data = { ok: false, error: "non_json_response", message: responseText };
       }
-      console.log("[InfinitePay] status HTTP", response.status);
-      console.log("[InfinitePay] resposta bruta do endpoint", responseText);
-      console.log("[InfinitePay] resposta completa do endpoint", data);
       if (!response.ok || !isPaymentResponse(data)) {
-        console.error("[InfinitePay] erro ao criar pagamento", {
-          httpStatus: response.status,
-          response: data,
-        });
         throw new Error("Pagamento indisponível.");
       }
-      console.log("[InfinitePay] paymentUrl recebida antes do redirect", data.paymentUrl);
       window.location.assign(data.paymentUrl);
-    } catch (error) {
-      console.error("[InfinitePay] falha técnica no checkout", error);
+    } catch {
       setPaymentError("Não foi possível iniciar o pagamento. Tente novamente ou fale com seu atendimento.");
       setIsPaymentLoading(false);
     }
@@ -143,7 +180,7 @@ export function CheckoutPage({ seller, testMode }: { seller: SellerSlug; testMod
                   </div>
                 </section>
                 <CustomerForm data={customer} onChange={setCustomer} />
-                <ShippingOptions options={availableShippingOptions} selected={shippingId} onSelect={setShippingId} />
+                <ShippingOptions options={effectiveShippingOptions} selected={effectiveShippingId} onSelect={setShippingId} loading={shippingLoading} waitingForZip={hasShippableItems && !validPostalCode} />
                 <CouponBox seller={seller} applied={couponApplied} onApply={(applied, code) => { setCouponApplied(applied); setCouponCode(code); }} />
               </div>
               <aside className="overflow-hidden rounded-[28px] border border-[#E6E8ED] bg-white shadow-[0_18px_55px_rgba(13,27,42,.09)] lg:sticky lg:top-28">
@@ -156,13 +193,13 @@ export function CheckoutPage({ seller, testMode }: { seller: SellerSlug; testMod
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between"><span className="text-[#344563]">Itens ({itemCount})</span><span className="font-semibold">{formatCurrency(subtotal)}</span></div>
                     {couponApplied && <div className="flex justify-between rounded-lg bg-[#C9C6F0]/40 px-2 py-1.5 text-[#0D1B2A]"><span>Desconto de 10%</span><strong>− {formatCurrency(discount)}</strong></div>}
-                    <div className="flex justify-between"><span className="text-[#344563]">Frete</span><span className="font-semibold">{formatCurrency(shipping.price)}</span></div>
-                    <div className="rounded-xl bg-[#F7F8FA] p-3 text-xs text-[#344563]"><strong className="block text-[#0D1B2A]">{shipping.name}</strong><span>{shipping.estimate}</span></div>
+                    <div className="flex justify-between"><span className="text-[#344563]">Frete</span><span className="font-semibold">{shipping ? formatCurrency(shipping.priceCents / 100) : "A calcular"}</span></div>
+                    {shipping && <div className="rounded-xl bg-[#F7F8FA] p-3 text-xs text-[#344563]"><strong className="block text-[#0D1B2A]">{shipping.provider} · {shipping.service}</strong><span>{shipping.deliveryTime}</span></div>}
                   </div>
                   <div className="my-5 h-px bg-[#E6E8ED]" />
                   <div className="flex items-end justify-between"><div><span className="text-xs font-semibold text-[#344563]">Total a pagar</span><p className="text-[10px] text-[#344563]">em ambiente seguro</p></div><strong className="text-3xl tracking-[-.05em] text-[#0D1B2A]">{formatCurrency(total)}</strong></div>
                   <p className="mt-4 text-center text-[11px] leading-5 text-[#344563]">Você será direcionado para o ambiente seguro da InfinitePay.</p>
-                  <button type="button" onClick={finish} disabled={isPaymentLoading} className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#047857] px-4 py-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(4,120,87,.28)] transition hover:bg-[#065F46] disabled:cursor-wait disabled:opacity-75">
+                  <button type="button" onClick={finish} disabled={isPaymentLoading || shippingLoading || !shipping} className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#047857] px-4 py-4 text-sm font-bold text-white shadow-[0_12px_26px_rgba(4,120,87,.28)] transition hover:bg-[#065F46] disabled:cursor-wait disabled:opacity-75">
                     {isPaymentLoading ? <><span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> Gerando pagamento seguro...</> : <>Finalizar no pagamento seguro <span>→</span></>}
                   </button>
                   {paymentError && <div role="alert" className="mt-3 rounded-xl border border-[#B42318]/20 bg-[#FEF3F2] px-3 py-2.5 text-xs leading-5 text-[#B42318]">{paymentError}</div>}
@@ -182,6 +219,15 @@ export function CheckoutPage({ seller, testMode }: { seller: SellerSlug; testMod
       </footer>
     </div>
   );
+}
+
+function isShippingResponse(value: unknown): value is { ok: true; options: ShippingOption[] } {
+  if (!value || typeof value !== "object" || !("ok" in value) || !("options" in value)) return false;
+  const response = value as { ok?: unknown; options?: unknown };
+  return response.ok === true && Array.isArray(response.options) && response.options.length > 0 && response.options.every((option) =>
+    Boolean(option && typeof option.id === "string" && typeof option.provider === "string" && typeof option.service === "string" &&
+      Number.isInteger(option.priceCents) && typeof option.deliveryTime === "string" &&
+      ["melhor_envio", "fallback", "teste", "digital"].includes(option.source)));
 }
 
 function isPaymentResponse(value: unknown): value is { ok: true; orderId: string; orderNsu: string; paymentUrl: string } {
