@@ -1,7 +1,7 @@
 import { categories } from "@/lib/mock-data";
 import type { Category } from "@/types/checkout";
 
-type Props = { active: "Todos" | Category; onChange: (category: "Todos" | Category) => void };
+type Props = { active: Category; onChange: (category: Category) => void };
 
 export function CategoryTabs({ active, onChange }: Props) {
   return (

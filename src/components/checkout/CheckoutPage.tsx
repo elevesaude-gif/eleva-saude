@@ -21,7 +21,7 @@ const emptyCustomer: CustomerData = {
 
 export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSlug; testMode: boolean; testToken?: string }) {
   const [step, setStep] = useState<1 | 2>(1);
-  const [category, setCategory] = useState<"Todos" | Category>("Todos");
+  const [category, setCategory] = useState<Category>("Tirzepatida");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [customer, setCustomer] = useState(emptyCustomer);
   const [shippingId, setShippingId] = useState("");
@@ -38,7 +38,7 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discount = couponApplied ? subtotal * 0.1 : 0;
-  const filtered = useMemo(() => category === "Todos" ? availableProducts : availableProducts.filter((product) => product.category === category), [availableProducts, category]);
+  const filtered = useMemo(() => availableProducts.filter((product) => product.category === category), [availableProducts, category]);
   const setQuantity = (id: string, delta: number) => setQuantities((current) => ({ ...current, [id]: Math.max(0, (current[id] ?? 0) + delta) }));
   const goToSummary = () => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
@@ -137,8 +137,8 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
               <div className="relative flex max-w-2xl flex-col items-start">
                 <BrandLogo negative size="small" className="mb-3" />
                 <p className="mb-4 text-[10px] font-extrabold uppercase tracking-[.2em] text-[#C9C6F0]">Ambiente privado de fechamento</p>
-                <h1 className="font-serif text-[29px] font-semibold leading-[1.08] tracking-[-.025em] sm:text-[38px]">Finalize seu pedido com a eLeve Saúde</h1>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">Ambiente seguro para concluir o pedido orientado pela nossa equipe.</p>
+                <h1 className="font-serif text-[29px] font-semibold leading-[1.08] tracking-[-.025em] sm:text-[38px]">Escolha sua tirzepatida</h1>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">Escolha sua apresentação de tirzepatida e tenha resultado no seu protocolo de controle de peso e saúde metabólica.</p>
                 <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#C9C6F0] px-3 py-2 text-[11px] font-bold text-[#0D1B2A]">
                   <span aria-hidden>✓</span> Atendimento personalizado com {sellers[seller]}
                 </div>

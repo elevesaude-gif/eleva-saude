@@ -1,6 +1,6 @@
 export type SellerSlug = "isabela" | "caio";
 
-export type Category = "Saúde Metabólica" | "Bem-estar" | "Kits" | "Outros";
+export type Category = "Tirzepatida" | "Suplementos" | "Shopping";
 
 export type Product = {
   id: string;
@@ -11,6 +11,7 @@ export type Product = {
   category: Category;
   icon: string;
   accent: string;
+  image?: string;
   weightGrams: number;
   heightCm: number;
   widthCm: number;

@@ -5,21 +5,18 @@ export const sellers: Record<SellerSlug, string> = {
   caio: "Caio",
 };
 
-export const categories: Array<"Todos" | Category> = [
-  "Todos",
-  "Saúde Metabólica",
-  "Bem-estar",
-  "Kits",
-  "Outros",
-];
+export const categories: Category[] = ["Tirzepatida", "Suplementos", "Shopping"];
 
 export const products: Product[] = [
-  { id: "equilibrio", name: "Kit Equilíbrio", description: "Uma seleção pensada para apoiar uma rotina mais equilibrada.", price: 189.9, category: "Kits", icon: "✦", accent: "#C9C6F0", weightGrams: 700, heightCm: 12, widthCm: 20, lengthCm: 28, requiresShipping: true },
-  { id: "vitalidade", name: "Kit Vitalidade", description: "Cuidado diário para mais disposição e leveza na sua jornada.", price: 229.9, category: "Kits", icon: "↗", accent: "#E6E8ED", weightGrams: 900, heightCm: 14, widthCm: 22, lengthCm: 30, requiresShipping: true },
-  { id: "nutricional", name: "Acompanhamento Nutricional", description: "Orientação individual para hábitos possíveis e consistentes.", price: 149.9, category: "Saúde Metabólica", icon: "◎", accent: "#F7F8FA", weightGrams: 0, heightCm: 0, widthCm: 0, lengthCm: 0, requiresShipping: false },
-  { id: "bem-estar", name: "Protocolo Bem-estar", description: "Uma experiência guiada de autocuidado para sua rotina.", price: 119.9, category: "Bem-estar", icon: "◇", accent: "#C9C6F0", weightGrams: 500, heightCm: 10, widthCm: 18, lengthCm: 24, requiresShipping: true },
-  { id: "saude-leve", name: "Combo Saúde Leve", description: "Soluções combinadas para cuidar de você de forma prática.", price: 279.9, category: "Saúde Metabólica", icon: "≈", accent: "#E6E8ED", weightGrams: 1100, heightCm: 16, widthCm: 24, lengthCm: 32, requiresShipping: true },
-  { id: "consulta", name: "Consulta Inicial", description: "Primeiro encontro para entender seu momento e seus objetivos.", price: 89.9, category: "Outros", icon: "+", accent: "#F7F8FA", weightGrams: 0, heightCm: 0, widthCm: 0, lengthCm: 0, requiresShipping: false },
+  { id: "tirzec-15", name: "Tirzec 15", description: "Para quem busca controle de peso e saúde metabólica com uma apresentação multidose prática e de alto rendimento, com apresentação multidose de 60mg em 2mL.", price: 625, priceCents: 62500, category: "Tirzepatida", icon: "15", accent: "#C9C6F0", image: "/products/tirzec-15.webp", weightGrams: 300, heightCm: 8, widthCm: 16, lengthCm: 22, requiresShipping: true },
+  { id: "tirzec-4-ampolas", name: "Tirzec 4 Ampolas", description: "Para quem quer praticidade com 4 ampolas de tirzepatida 15mg/0,5mL prontas para uma rotina mais organizada.", price: 850, priceCents: 85000, category: "Tirzepatida", icon: "4×", accent: "#E6E8ED", image: "/products/tirzec-4-ampolas.webp", weightGrams: 300, heightCm: 8, widthCm: 16, lengthCm: 22, requiresShipping: true },
+  { id: "tg-15", name: "T.G 15", description: "Para quem busca uma opção objetiva para avançar no protocolo de controle de peso e saúde metabólica, com uma apresentação prática de 4 ampolas de tirzepatida 15mg.", price: 890, priceCents: 89000, category: "Tirzepatida", icon: "TG", accent: "#F7F8FA", image: "/products/tg-15.webp", weightGrams: 300, heightCm: 8, widthCm: 16, lengthCm: 22, requiresShipping: true },
+  { id: "lipoless", name: "Lipoless", description: "Para quem quer uma apresentação multidose prática, pensada para facilitar a rotina em frasco multidose com 60mg de tirzepatida em 2,4mL.", price: 720, priceCents: 72000, category: "Tirzepatida", icon: "60", accent: "#C9C6F0", image: "/products/lipoless.webp", weightGrams: 300, heightCm: 8, widthCm: 16, lengthCm: 22, requiresShipping: true },
+  { id: "tirzegen", name: "Tirzegen", description: "Para quem busca uma apresentação liofilizada de tirzepatida 60mg, acompanhada de 2mL de água bacteriostática.", price: 750, priceCents: 75000, category: "Tirzepatida", icon: "TZ", accent: "#E6E8ED", image: "/products/tirzegen.webp", weightGrams: 300, heightCm: 8, widthCm: 16, lengthCm: 22, requiresShipping: true },
+  { id: "gluconex", name: "Gluconex", description: "Para quem busca controle de peso e saúde metabólica com 4 ampolas de tirzepatida 15mg/1mL.", price: 890, priceCents: 89000, category: "Tirzepatida", icon: "GX", accent: "#F7F8FA", image: "/products/gluconex.webp", weightGrams: 300, heightCm: 8, widthCm: 16, lengthCm: 22, requiresShipping: true },
+  { id: "tirzedral", name: "Tirzedral", description: "Para quem busca uma apresentação prática para protocolo de controle de peso e saúde metabólica, com 4 ampolas de 15mg/0,5mL.", price: 950, priceCents: 95000, category: "Tirzepatida", icon: "TD", accent: "#C9C6F0", image: "/products/tirzedral.webp", weightGrams: 300, heightCm: 8, widthCm: 16, lengthCm: 22, requiresShipping: true },
+  { id: "tirzedral-md", name: "Tirzedral MD", description: "Para quem busca tirzepatida em ampola multidose, com praticidade, rendimento e reposição facilitada com 60mg.", price: 950, priceCents: 95000, category: "Tirzepatida", icon: "MD", accent: "#E6E8ED", image: "/products/tirzedral-md.webp", weightGrams: 300, heightCm: 8, widthCm: 16, lengthCm: 22, requiresShipping: true },
+  { id: "lipoland", name: "Lipoland", description: "Para quem busca controle de peso e saúde metabólica com apresentação multidose de 60mg de tirzepatida em 2mL.", price: 950, priceCents: 95000, category: "Tirzepatida", icon: "LP", accent: "#F7F8FA", image: "/products/lipoland.webp", weightGrams: 300, heightCm: 8, widthCm: 16, lengthCm: 22, requiresShipping: true },
 ];
 
 export const internalTestProduct: Product = {
@@ -28,7 +25,7 @@ export const internalTestProduct: Product = {
   description: "Produto interno para validação de pagamento.",
   price: 1,
   priceCents: 100,
-  category: "Outros",
+  category: "Shopping",
   icon: "·",
   accent: "#F7F8FA",
   weightGrams: 0,
