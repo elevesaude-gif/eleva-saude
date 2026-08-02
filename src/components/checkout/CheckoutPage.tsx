@@ -215,7 +215,7 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
           <div className="flex items-center gap-2"><BrandLogo /><p className="hidden text-[11px] text-[#344563] md:block">Um caminho mais leve para a sua saúde</p></div>
           <div className="flex flex-wrap justify-center gap-4 text-[10px] font-bold uppercase tracking-wider text-[#344563]"><span>✓ Pagamento seguro</span><span>♡ Atendimento personalizado</span></div>
         </div>
-        <p className="mx-auto mt-6 max-w-7xl border-t border-[#E6E8ED] pt-4 text-center text-[10px] leading-4 text-[#344563]">Ambiente de demonstração local. Confirmação automática ainda não integrada.</p>
+        <p className="mx-auto mt-6 max-w-7xl border-t border-[#E6E8ED] pt-4 text-center text-[10px] leading-4 text-[#344563]">Compra processada em ambiente seguro. Atendimento personalizado e acompanhamento do pedido pela equipe eLeve Saúde.</p>
       </footer>
     </div>
   );
