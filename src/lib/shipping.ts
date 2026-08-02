@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { digitalShippingOption, internalTestProduct, internalTestShippingOption, products, shippingOptions } from "@/lib/mock-data";
+import { digitalShippingOption, internalTestProduct, internalTestShippingOption, products } from "@/lib/mock-data";
 import type { Product, ShippingOption } from "@/types/checkout";
 
 export type ShippingItemInput = { id: string; quantity: number };
@@ -17,6 +17,12 @@ type MelhorEnvioQuote = {
   error?: string;
   company?: { name?: string };
 };
+
+const supportedServices = [
+  { id: "27", provider: "Jadlog", service: "Package Centralizado" },
+  { id: "31", provider: "Loggi", service: "Express" },
+  { id: "33", provider: "J&T", service: "Standard" },
+] as const;
 
 export function resolveShippingProducts(items: ShippingItemInput[], allowTestProduct = false) {
   const catalog = allowTestProduct ? [...products, internalTestProduct] : products;
@@ -48,9 +54,10 @@ export async function getShippingQuotes(input: {
 
   const token = process.env.MELHOR_ENVIO_TOKEN?.trim();
   const userAgent = process.env.MELHOR_ENVIO_USER_AGENT?.trim();
+  const allowedServices = getAllowedServices();
   if (!token || !userAgent) {
-    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "fallback", optionCount: shippingOptions.length });
-    return shippingOptions;
+    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "melhor_envio", optionCount: 0 });
+    return [];
   }
 
   const endpoint = process.env.MELHOR_ENVIO_ENV === "production"
@@ -67,6 +74,7 @@ export async function getShippingQuotes(input: {
         "User-Agent": userAgent,
       },
       body: JSON.stringify({
+        services: allowedServices.join(","),
         from: { postal_code: (process.env.MELHOR_ENVIO_FROM_POSTAL_CODE || "05388090").replace(/\D/g, "") },
         to: { postal_code: postalCode },
         products: shippableLines.map(({ product, quantity }) => ({
@@ -84,12 +92,17 @@ export async function getShippingQuotes(input: {
     });
 
     const body: unknown = await response.json().catch(() => undefined);
-    const options = response.ok && Array.isArray(body) ? body.flatMap(normalizeQuote) : [];
-    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: options.length ? "melhor_envio" : "fallback", optionCount: options.length || shippingOptions.length, httpStatus: response.status });
-    return options.length ? options : shippingOptions;
+    const options = response.ok && Array.isArray(body)
+      ? body.flatMap(normalizeQuote)
+        .filter((option) => allowedServices.includes(option.id))
+        .sort((left, right) => allowedServices.indexOf(left.id) - allowedServices.indexOf(right.id))
+        .slice(0, 3)
+      : [];
+    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "melhor_envio", optionCount: options.length, httpStatus: response.status });
+    return options;
   } catch {
-    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "fallback", optionCount: shippingOptions.length });
-    return shippingOptions;
+    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "melhor_envio", optionCount: 0 });
+    return [];
   }
 }
 
@@ -135,17 +148,26 @@ function normalizeQuote(value: unknown): ShippingOption[] {
   if (!value || typeof value !== "object") return [];
   const quote = value as MelhorEnvioQuote;
   if (quote.error || quote.id === undefined || !quote.name) return [];
+  const service = supportedServices.find((candidate) => candidate.id === String(quote.id));
+  if (!service) return [];
   const price = Number(quote.custom_price ?? quote.price);
   if (!Number.isFinite(price) || price < 0) return [];
   const days = quote.custom_delivery_time ?? quote.delivery_time;
   return [{
     id: String(quote.id),
-    provider: quote.company?.name?.trim() || "Transportadora",
-    service: quote.name,
+    provider: service.provider,
+    service: service.service,
     priceCents: Math.round(price * 100),
     deliveryTime: Number.isFinite(days) ? `${days} ${days === 1 ? "dia útil" : "dias úteis"}` : "Prazo a confirmar",
     source: "melhor_envio",
   }];
+}
+
+function getAllowedServices(): string[] {
+  const configured = (process.env.MELHOR_ENVIO_ALLOWED_SERVICES || "27,31,33")
+    .split(",")
+    .map((id) => id.trim());
+  return supportedServices.map((service) => service.id).filter((id) => configured.includes(id));
 }
 
 function getProductPriceCents(product: Product) {

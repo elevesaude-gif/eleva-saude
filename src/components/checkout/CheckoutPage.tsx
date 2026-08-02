@@ -224,7 +224,7 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
 function isShippingResponse(value: unknown): value is { ok: true; options: ShippingOption[] } {
   if (!value || typeof value !== "object" || !("ok" in value) || !("options" in value)) return false;
   const response = value as { ok?: unknown; options?: unknown };
-  return response.ok === true && Array.isArray(response.options) && response.options.length > 0 && response.options.every((option) =>
+  return response.ok === true && Array.isArray(response.options) && response.options.every((option) =>
     Boolean(option && typeof option.id === "string" && typeof option.provider === "string" && typeof option.service === "string" &&
       Number.isInteger(option.priceCents) && typeof option.deliveryTime === "string" &&
       ["melhor_envio", "fallback", "teste", "digital"].includes(option.source)));
