@@ -19,9 +19,13 @@ type MelhorEnvioQuote = {
   company?: { name?: string };
 };
 
-const DEFAULT_ALLOWED_SERVICES = ["27", "31", "33"] as const;
+const supportedServices = [
+  { id: "27", provider: "Jadlog", service: "Package Centralizado" },
+  { id: "31", provider: "Loggi", service: "Express" },
+  { id: "33", provider: "J&T", service: "Standard" },
+] as const;
 
-export async function resolveShippingProducts(items: ShippingItemInput[], allowTestProduct = false, authoritativeProducts?:Product[]) {
+export async function resolveShippingProducts(items: ShippingItemInput[], allowTestProduct = false, authoritativeProducts?: Product[]) {
   const publicProducts = authoritativeProducts ?? await listPublicProductsWithFallback();
   const catalog = allowTestProduct && !authoritativeProducts ? [...publicProducts, internalTestProduct] : publicProducts;
   return items.map((item) => {
@@ -38,7 +42,7 @@ export async function getShippingQuotes(input: {
   items: ShippingItemInput[];
   subtotalCents: number;
   allowTestProduct?: boolean;
-  authoritativeProducts?:Product[];
+  authoritativeProducts?: Product[];
 }): Promise<ShippingOption[]> {
   const postalCode = input.postalCode.replace(/\D/g, "");
   if (postalCode.length !== 8) throw new Error("invalid_postal_code");
@@ -91,21 +95,18 @@ export async function getShippingQuotes(input: {
     });
 
     const body: unknown = await response.json().catch(() => undefined);
-    const normalized = response.ok && Array.isArray(body) ? body.flatMap(normalizeQuote) : [];
-    const options = allowedServices.flatMap((serviceId) => normalized.filter((option) => option.id === serviceId)).slice(0, 3);
+    const options = response.ok && Array.isArray(body)
+      ? body.flatMap(normalizeQuote)
+        .filter((option) => allowedServices.includes(option.id))
+        .sort((left, right) => allowedServices.indexOf(left.id) - allowedServices.indexOf(right.id))
+        .slice(0, 3)
+      : [];
     logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: options.length ? "melhor_envio" : "unavailable", optionCount: options.length, httpStatus: response.status });
     return options;
   } catch {
     logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "unavailable", optionCount: 0 });
     return [];
   }
-}
-
-function getAllowedServices() {
-  const configured = process.env.MELHOR_ENVIO_ALLOWED_SERVICES?.split(",").map((id) => id.trim()).filter(Boolean);
-  const configuredSet = new Set(configured);
-  const validConfigured = DEFAULT_ALLOWED_SERVICES.filter((id) => configuredSet.has(id));
-  return validConfigured.length ? validConfigured : [...DEFAULT_ALLOWED_SERVICES];
 }
 
 export function sealShippingQuotes(options: ShippingOption[], context: QuoteContext) {
@@ -150,17 +151,26 @@ function normalizeQuote(value: unknown): ShippingOption[] {
   if (!value || typeof value !== "object") return [];
   const quote = value as MelhorEnvioQuote;
   if (quote.error || quote.id === undefined || !quote.name) return [];
+  const service = supportedServices.find((candidate) => candidate.id === String(quote.id));
+  if (!service) return [];
   const price = Number(quote.custom_price ?? quote.price);
   if (!Number.isFinite(price) || price < 0) return [];
   const days = quote.custom_delivery_time ?? quote.delivery_time;
   return [{
     id: String(quote.id),
-    provider: quote.company?.name?.trim() || "Transportadora",
-    service: quote.name,
+    provider: service.provider,
+    service: service.service,
     priceCents: Math.round(price * 100),
     deliveryTime: Number.isFinite(days) ? `${days} ${days === 1 ? "dia útil" : "dias úteis"}` : "Prazo a confirmar",
     source: "melhor_envio",
   }];
+}
+
+function getAllowedServices(): string[] {
+  const configured = (process.env.MELHOR_ENVIO_ALLOWED_SERVICES || "27,31,33")
+    .split(",")
+    .map((id) => id.trim());
+  return supportedServices.map((service) => service.id).filter((id) => configured.includes(id));
 }
 
 function getProductPriceCents(product: Product) {
