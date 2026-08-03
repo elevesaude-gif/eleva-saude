@@ -4,9 +4,6 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { CardVisual, type VisualVariant } from "@/components/educational/CardVisual";
 import { EducationalCard } from "@/components/educational/EducationalCard";
 import { WhatsAppButton } from "@/components/educational/WhatsAppButton";
-import { StructuredGuide } from "@/components/educational/StructuredGuide";
-import { getPublishedGuide } from "@/lib/guide-content";
-import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "Guia das Canetas para Emagrecimento | eLeve Saúde",
@@ -55,10 +52,8 @@ function CardGrid({ cards, columns = 3, compact = false }: { cards: CardData[]; 
   return <div className={`mt-8 grid gap-4 sm:grid-cols-2 ${columns === 3 ? "lg:grid-cols-3" : ""}`}>{cards.map((card) => <EducationalCard key={card.title} {...card} compact={compact} />)}</div>;
 }
 
-export default async function WeightLossPensGuidePage() {
-  await connection();
-  const publishedGuide = await getPublishedGuide();
-  if (publishedGuide) return <StructuredGuide page={publishedGuide} />;
+// Temporariamente, a rota pública usa o conteúdo completo recuperado até todos os blocos serem migrados corretamente para o CMS.
+export default function WeightLossPensGuidePage() {
   const highlights: CardData[] = [
     { title: "Preço alto", visualVariant: "price" }, { title: "Influência das redes sociais", visualVariant: "social" },
     { title: "Medo de produto falso", visualVariant: "fakeProduct" }, { title: "Dúvidas sobre Paraguai", visualVariant: "paraguay" },
