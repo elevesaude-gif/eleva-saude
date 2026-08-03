@@ -1,0 +1,30 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { calculateAuthoritativeSubtotal,validateAuthoritativeSelection } from "../src/lib/product-validation.ts";
+import { isSafeContentUrl } from "../src/lib/content-validation.ts";
+import { MAX_MEDIA_BYTES,validateMediaBytes } from "../src/lib/media-validation.ts";
+
+const active={id:"active",active:true,deleted_at:null,stock:5};
+assert.equal(validateAuthoritativeSelection([{productId:"active",quantity:2}],[active])[0].id,"active","produto ativo deve ser aceito");
+assert.throws(()=>validateAuthoritativeSelection([{productId:"inactive",quantity:1}],[{...active,id:"inactive",active:false}]),/indisponível/);
+assert.throws(()=>validateAuthoritativeSelection([{productId:"archived",quantity:1}],[{...active,id:"archived",deleted_at:"2026-01-01"}]),/indisponível/);
+assert.throws(()=>validateAuthoritativeSelection([{productId:"missing",quantity:1}],[]),/inexistente/);
+for(const quantity of [0,-1,1.5,100])assert.throws(()=>validateAuthoritativeSelection([{productId:"active",quantity}],[active]),/Quantidade/);
+assert.throws(()=>validateAuthoritativeSelection([{productId:"active",quantity:6}],[active]),/Estoque/);
+assert.equal(calculateAuthoritativeSubtotal([{unitPriceCents:62500,quantity:2}]),125000,"total deve usar preço oficial, não preço do navegador");
+assert.equal(isSafeContentUrl("/isabela"),true);assert.equal(isSafeContentUrl("https://example.com/x"),true);assert.equal(isSafeContentUrl("javascript:alert(1)"),false);assert.equal(isSafeContentUrl("data:image/png;base64,x"),false);
+assert.throws(()=>validateMediaBytes(new Uint8Array([1,2,3]),"text/plain",3),/Formato/);assert.throws(()=>validateMediaBytes(new Uint8Array([0xff,0xd8,0xff]),"image/jpeg",MAX_MEDIA_BYTES+1),/5 MB/);validateMediaBytes(new Uint8Array([0xff,0xd8,0xff]),"image/jpeg",3);
+
+const products=await readFile(new URL("../src/lib/products.ts",import.meta.url),"utf8");
+const payment=await readFile(new URL("../src/app/api/payments/infinitepay/route.ts",import.meta.url),"utf8");
+const media=await readFile(new URL("../src/lib/admin/media.ts",import.meta.url),"utf8");
+const guide=await readFile(new URL("../src/lib/guide-content.ts",import.meta.url),"utf8");
+const upload=await readFile(new URL("../src/components/admin/MediaUpload.tsx",import.meta.url),"utf8");
+const actions=await readFile(new URL("../src/app/admin/cms-actions.ts",import.meta.url),"utf8");
+assert.match(products,/listPublicProductsWithFallback/);assert.match(products,/getAuthoritativeProductsByIds/);assert.doesNotMatch(payment,/mock-data/);assert.match(payment,/ProductValidationUnavailableError/);
+assert.match(payment,/Object\.keys\(item\)\.length===2/);assert.doesNotMatch(payment,/requestedItem\.price/);assert.match(payment,/shippingOptions\.find/);
+assert.match(payment,/Não foi possível validar os produtos neste momento\. Tente novamente\./);assert.ok(payment.indexOf("const availableProducts = await getAuthoritativeProductsByIds")<payment.indexOf("const paymentUrl = await createInfinitePayCheckout"),"consulta oficial deve ocorrer antes da cobrança");
+assert.match(media,/validateMediaBytes/);assert.match(media,/randomUUID/);
+assert.match(guide,/isSafeContentUrl/);assert.doesNotMatch(guide,/dangerouslySetInnerHTML/);
+assert.match(upload,/onUploaded\(result\.url\)/);assert.match(upload,/Enviando imagem/);assert.match(actions,/revalidatePath\("\/guia-canetas-emagrecimento"\)/);assert.match(actions,/revalidatePath\("\/isabela"\)/);
+console.log("Verificações de segurança e regressão: aprovadas.");

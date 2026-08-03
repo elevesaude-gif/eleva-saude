@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { CheckoutPage } from "@/components/checkout/CheckoutPage";
 import type { SellerSlug } from "@/types/checkout";
+import { listPublicProductsWithFallback } from "@/lib/products";
 
 const validSellers: SellerSlug[] = ["isabela", "caio"];
 
@@ -38,5 +39,6 @@ export default async function SellerPage({
     );
   }
 
-  return <CheckoutPage key={testMode ? "test" : "normal"} seller={seller as SellerSlug} testMode={testMode} testToken={testMode && typeof query.token === "string" ? query.token : undefined} />;
+  const catalog = await listPublicProductsWithFallback();
+  return <CheckoutPage key={testMode ? "test" : "normal"} products={catalog} seller={seller as SellerSlug} testMode={testMode} testToken={testMode && typeof query.token === "string" ? query.token : undefined} />;
 }

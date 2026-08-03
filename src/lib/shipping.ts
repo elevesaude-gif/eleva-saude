@@ -1,7 +1,8 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { digitalShippingOption, internalTestProduct, internalTestShippingOption, products } from "@/lib/mock-data";
+import { digitalShippingOption, internalTestProduct, internalTestShippingOption } from "@/lib/mock-data";
+import { listPublicProductsWithFallback } from "@/lib/products";
 import type { Product, ShippingOption } from "@/types/checkout";
 
 export type ShippingItemInput = { id: string; quantity: number };
@@ -24,8 +25,9 @@ const supportedServices = [
   { id: "33", provider: "J&T", service: "Standard" },
 ] as const;
 
-export function resolveShippingProducts(items: ShippingItemInput[], allowTestProduct = false) {
-  const catalog = allowTestProduct ? [...products, internalTestProduct] : products;
+export async function resolveShippingProducts(items: ShippingItemInput[], allowTestProduct = false, authoritativeProducts?: Product[]) {
+  const publicProducts = authoritativeProducts ?? await listPublicProductsWithFallback();
+  const catalog = allowTestProduct && !authoritativeProducts ? [...publicProducts, internalTestProduct] : publicProducts;
   return items.map((item) => {
     const product = catalog.find((candidate) => candidate.id === item.id);
     if (!product || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) {
@@ -40,10 +42,11 @@ export async function getShippingQuotes(input: {
   items: ShippingItemInput[];
   subtotalCents: number;
   allowTestProduct?: boolean;
+  authoritativeProducts?: Product[];
 }): Promise<ShippingOption[]> {
   const postalCode = input.postalCode.replace(/\D/g, "");
   if (postalCode.length !== 8) throw new Error("invalid_postal_code");
-  const lines = resolveShippingProducts(input.items, input.allowTestProduct);
+  const lines = await resolveShippingProducts(input.items, input.allowTestProduct, input.authoritativeProducts);
   const canonicalSubtotal = lines.reduce((sum, { product, quantity }) => sum + getProductPriceCents(product) * quantity, 0);
   if (canonicalSubtotal !== input.subtotalCents) throw new Error("invalid_subtotal");
 
@@ -56,7 +59,7 @@ export async function getShippingQuotes(input: {
   const userAgent = process.env.MELHOR_ENVIO_USER_AGENT?.trim();
   const allowedServices = getAllowedServices();
   if (!token || !userAgent) {
-    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "melhor_envio", optionCount: 0 });
+    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "unavailable", optionCount: 0 });
     return [];
   }
 
@@ -98,10 +101,10 @@ export async function getShippingQuotes(input: {
         .sort((left, right) => allowedServices.indexOf(left.id) - allowedServices.indexOf(right.id))
         .slice(0, 3)
       : [];
-    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "melhor_envio", optionCount: options.length, httpStatus: response.status });
+    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: options.length ? "melhor_envio" : "unavailable", optionCount: options.length, httpStatus: response.status });
     return options;
   } catch {
-    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "melhor_envio", optionCount: 0 });
+    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "unavailable", optionCount: 0 });
     return [];
   }
 }

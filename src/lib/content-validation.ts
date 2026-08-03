@@ -1,0 +1,1 @@
+export function isSafeContentUrl(value:unknown){if(value===undefined||value==="")return true;if(typeof value!=="string"||value.length>2048)return false;if(value.startsWith("/"))return !value.startsWith("//")&&!value.includes("\\");try{const url=new URL(value);return (url.protocol==="http:"||url.protocol==="https:")&&Boolean(url.hostname);}catch{return false;}}

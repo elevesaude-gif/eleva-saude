@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:security": "node --experimental-strip-types scripts/security-checks.mjs",
+    "verify:guide-persistence": "node --env-file=.env.local scripts/verify-guide-persistence.mjs",
+    "audit:encoding": "node scripts/audit-encoding.mjs",
+    "test:cms-roundtrip": "node --env-file=.env.local scripts/test-cms-roundtrip.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",

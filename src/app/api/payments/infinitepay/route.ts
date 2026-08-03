@@ -3,7 +3,9 @@ import {
   InfinitePayError,
   type InfinitePayItem,
 } from "@/lib/infinitepay";
-import { internalTestProduct, products, sellers } from "@/lib/mock-data";
+import { sellers } from "@/lib/sellers";
+import { getAuthoritativeProductsByIds, InvalidAuthoritativeProductError, ProductValidationUnavailableError } from "@/lib/products";
+import { calculateAuthoritativeSubtotal } from "@/lib/product-validation";
 import { createOrderWithItems, recordCheckoutFailure, updateOrderPaymentUrl } from "@/lib/orders";
 import { getShippingQuotes, verifySealedShippingQuote } from "@/lib/shipping";
 import type { CustomerData, SellerSlug } from "@/types/checkout";
@@ -13,14 +15,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type CheckoutRequest = {
-  items: Array<{ id: string; quantity: number }>;
+  items: Array<{ productId: string; quantity: number }>;
   customer: CustomerData;
   seller: SellerSlug;
   shippingId: string;
   shippingQuoteToken?: string;
   couponCode?: string;
-  totalCents: number;
-  testToken?: string;
 };
 
 export async function POST(request: Request) {
@@ -37,10 +37,9 @@ export async function POST(request: Request) {
     }
     debugInfo("2. validação concluída");
 
-    const allowTestProduct = Boolean(process.env.TEST_PRODUCT_TOKEN) && input.testToken === process.env.TEST_PRODUCT_TOKEN;
-    const availableProducts = allowTestProduct ? [...products, internalTestProduct] : products;
+    const availableProducts = await getAuthoritativeProductsByIds(input.items);
     const canonicalLines = input.items.map((requestedItem) => {
-      const product = availableProducts.find((candidate) => candidate.id === requestedItem.id);
+      const product = availableProducts.find((candidate) => candidate.id === requestedItem.productId);
       if (!product) throw new InvalidCheckoutError("Produto inválido.");
       const unitPriceCents = product.priceCents ?? Math.round(product.price * 100);
       return {
@@ -52,20 +51,20 @@ export async function POST(request: Request) {
       };
     });
 
-    const subtotalCents = canonicalLines.reduce((sum, line) => sum + line.lineTotalCents, 0);
+    const subtotalCents = calculateAuthoritativeSubtotal(canonicalLines.map(line=>({unitPriceCents:line.unitPriceCents,quantity:line.quantity})));
     const shippingOptions = await getShippingQuotes({
       postalCode: input.customer.zipCode,
-      items: input.items,
+      items: input.items.map(item=>({id:item.productId,quantity:item.quantity})),
       subtotalCents,
-      allowTestProduct,
+      authoritativeProducts:availableProducts,
     });
     const sealedShipping = verifySealedShippingQuote(input.shippingQuoteToken, {
       postalCode: input.customer.zipCode,
-      items: input.items,
+      items: input.items.map(item=>({id:item.productId,quantity:item.quantity})),
       subtotalCents,
     });
-    const shipping = sealedShipping?.id === input.shippingId ? sealedShipping : shippingOptions.find((option) => option.id === input.shippingId);
-    if (!shipping || shipping.id !== input.shippingId) throw new InvalidCheckoutError("Frete inválido.");
+    const shipping = shippingOptions.find((option) => option.id === input.shippingId);
+    if (!shipping || shipping.id !== input.shippingId || (shipping.source === "melhor_envio" && (!sealedShipping || sealedShipping.id !== shipping.id || sealedShipping.priceCents !== shipping.priceCents))) throw new InvalidCheckoutError("Frete inválido.");
 
     const normalizedCoupon = input.couponCode?.trim().toUpperCase();
     const couponIsValid = normalizedCoupon === `${input.seller.toUpperCase()}10`;
@@ -73,9 +72,6 @@ export async function POST(request: Request) {
     const shippingCents = shipping.priceCents;
     const totalCents = subtotalCents - discountCents + shippingCents;
 
-    if (input.totalCents !== totalCents) {
-      throw new InvalidCheckoutError("O total do pedido mudou. Revise o pedido e tente novamente.");
-    }
     debugInfo("3. totais recalculados", { subtotalCents, discountCents, shippingCents, totalCents });
 
     const orderNsu = generateOrderNsu();
@@ -161,6 +157,8 @@ export async function POST(request: Request) {
     if (error instanceof InvalidCheckoutError) {
       return errorResponse("validation_error", error.message, 400, error);
     }
+    if(error instanceof ProductValidationUnavailableError){return errorResponse("product_validation_unavailable","Não foi possível validar os produtos neste momento. Tente novamente.",503);}
+    if(error instanceof InvalidAuthoritativeProductError){return errorResponse("validation_error",error.message,400);}
     debugError("[InfinitePay] falha ao criar checkout", safeErrorForLog(error));
     if (error instanceof InfinitePayError || stage === "infinitepay") {
       return errorResponse(
@@ -196,15 +194,14 @@ function buildPaymentItems(
 function isCheckoutRequest(value: unknown): value is CheckoutRequest {
   if (!value || typeof value !== "object") return false;
   const input = value as Partial<CheckoutRequest>;
+  if(!Object.keys(value).every(key=>["items","customer","seller","shippingId","shippingQuoteToken","couponCode"].includes(key)))return false;
   return (
     (input.seller === "isabela" || input.seller === "caio") && Array.isArray(input.items) && input.items.length > 0 &&
-    input.items.length <= products.length + 1 && input.items.every((item) => Boolean(item && typeof item.id === "string" &&
+    input.items.length <= 100 && input.items.every((item) => Boolean(item && Object.keys(item).length===2 && typeof item.productId === "string" &&
       Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 99)) &&
-    new Set(input.items.map((item) => item.id)).size === input.items.length && Boolean(input.customer && hasRequiredCustomerData(input.customer)) &&
+    new Set(input.items.map((item) => item.productId)).size === input.items.length && Boolean(input.customer && hasRequiredCustomerData(input.customer)) &&
     typeof input.shippingId === "string" && (input.shippingQuoteToken === undefined || typeof input.shippingQuoteToken === "string") &&
-    (input.couponCode === undefined || typeof input.couponCode === "string") &&
-    Number.isInteger(input.totalCents) && Number(input.totalCents) > 0 &&
-    (input.testToken === undefined || typeof input.testToken === "string")
+    (input.couponCode === undefined || typeof input.couponCode === "string")
   );
 }
 
@@ -240,7 +237,7 @@ function safeErrorForLog(error: unknown) {
   return { name: "UnknownError" };
 }
 
-type CheckoutErrorCode = "supabase_error" | "infinitepay_error" | "validation_error" | "internal_checkout_error";
+type CheckoutErrorCode = "supabase_error" | "infinitepay_error" | "validation_error" | "internal_checkout_error" | "product_validation_unavailable";
 
 function errorResponse(code: CheckoutErrorCode, message: string, status: number, error?: unknown) {
   return NextResponse.json({

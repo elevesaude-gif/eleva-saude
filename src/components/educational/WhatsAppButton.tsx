@@ -1,0 +1,8 @@
+const whatsappUrl = "https://api.whatsapp.com/send/?phone=5511920180233&text=Ol%C3%A1%21+Vim+atrav%C3%A9s+do+guia+da+eLeve+Sa%C3%BAde+e+gostaria+de+entender+meu+caso.&type=phone_number&app_absent=0";
+
+export function WhatsAppButton({ children = "Falar com a eLeve no WhatsApp", compact = false, className = "" }: { children?: React.ReactNode; compact?: boolean; className?: string }) {
+  return <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label={`${typeof children === "string" ? children : "Falar com a eLeve"} — abre o WhatsApp em nova aba`} className={`inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-[#16A34A] font-bold text-white shadow-[0_12px_28px_rgba(22,163,74,.25)] transition hover:-translate-y-0.5 hover:bg-[#128C3E] hover:shadow-[0_16px_34px_rgba(22,163,74,.32)] focus-visible:outline-[#16A34A] ${compact ? "px-4 py-2.5 text-sm" : "px-5 py-3 text-sm sm:text-base"} ${className}`}>
+    <svg aria-hidden="true" viewBox="0 0 32 32" className="size-5 shrink-0 fill-current"><path d="M16.04 3A12.8 12.8 0 0 0 5.1 22.45L3 29l6.78-2.02A12.8 12.8 0 1 0 16.04 3Zm0 23.42c-2.08 0-4.1-.6-5.82-1.73l-.42-.27-4.02 1.2 1.24-3.9-.28-.43a10.62 10.62 0 1 1 9.3 5.13Zm5.83-7.95c-.32-.16-1.9-.94-2.2-1.05-.29-.11-.5-.16-.72.16-.21.32-.82 1.05-1.01 1.27-.19.21-.37.24-.69.08-.32-.16-1.34-.49-2.56-1.58a9.58 9.58 0 0 1-1.77-2.2c-.18-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.18.21-.32.32-.53.1-.21.05-.4-.03-.56-.08-.16-.72-1.73-.98-2.37-.26-.62-.52-.54-.72-.55h-.61c-.21 0-.56.08-.85.4-.29.32-1.12 1.1-1.12 2.67s1.15 3.1 1.3 3.31c.16.21 2.25 3.44 5.46 4.83.76.33 1.36.52 1.82.67.77.24 1.46.21 2.01.13.62-.09 1.9-.78 2.17-1.53.27-.75.27-1.39.19-1.52-.08-.14-.29-.22-.61-.38Z" /></svg>
+    <span>{children}</span>
+  </a>;
+}

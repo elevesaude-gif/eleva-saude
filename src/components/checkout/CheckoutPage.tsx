@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
-import { digitalShippingOption, internalTestProduct, internalTestShippingOption, products, sellers } from "@/lib/mock-data";
-import type { Category, CustomerData, SellerSlug, ShippingOption } from "@/types/checkout";
+import { digitalShippingOption, internalTestProduct, internalTestShippingOption, sellers } from "@/lib/mock-data";
+import type { Category, CustomerData, Product, SellerSlug, ShippingOption } from "@/types/checkout";
 import { CartSummary, MobileCartBar } from "./CartSummary";
 import { CategoryTabs } from "./CategoryTabs";
 import { CheckoutHeader } from "./CheckoutHeader";
@@ -19,7 +20,7 @@ const emptyCustomer: CustomerData = {
   complement: "", neighborhood: "", city: "", state: "", reference: "",
 };
 
-export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSlug; testMode: boolean; testToken?: string }) {
+export function CheckoutPage({ seller, testMode, testToken, products }: { seller: SellerSlug; testMode: boolean; testToken?: string; products: Product[] }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [category, setCategory] = useState<Category>("Tirzepatida");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -32,7 +33,7 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
   const [couponCode, setCouponCode] = useState("");
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
-  const availableProducts = useMemo(() => testMode ? [...products, internalTestProduct] : products, [testMode]);
+  const availableProducts = useMemo(() => testMode ? [...products, internalTestProduct] : products, [products, testMode]);
 
   const items = useMemo(() => availableProducts.filter((product) => quantities[product.id]).map((product) => ({ ...product, quantity: quantities[product.id] })), [availableProducts, quantities]);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -97,14 +98,12 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((item) => ({ id: item.id, quantity: item.quantity })),
+          items: items.map((item) => ({ productId: item.id, quantity: item.quantity })),
           customer,
           seller,
           shippingId: effectiveShippingId,
           shippingQuoteToken: shipping.quoteToken,
           couponCode: couponApplied ? couponCode : undefined,
-          totalCents: Math.round(total * 100),
-          testToken,
         }),
       });
       const responseText = await response.text();
@@ -115,11 +114,12 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
         data = { ok: false, error: "non_json_response", message: responseText };
       }
       if (!response.ok || !isPaymentResponse(data)) {
-        throw new Error("Pagamento indisponível.");
+        const message=data&&typeof data==="object"&&"message" in data&&typeof data.message==="string"?data.message:"Pagamento indisponível.";
+        throw new Error(message);
       }
       window.location.assign(data.paymentUrl);
-    } catch {
-      setPaymentError("Não foi possível iniciar o pagamento. Tente novamente ou fale com seu atendimento.");
+    } catch (error) {
+      setPaymentError(error instanceof Error?error.message:"Não foi possível iniciar o pagamento. Tente novamente ou fale com seu atendimento.");
       setIsPaymentLoading(false);
     }
   };
@@ -138,12 +138,16 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
                 <BrandLogo negative size="small" className="mb-3" />
                 <p className="mb-4 text-[10px] font-extrabold uppercase tracking-[.2em] text-[#C9C6F0]">Ambiente privado de fechamento</p>
                 <h1 className="font-serif text-[29px] font-semibold leading-[1.08] tracking-[-.025em] sm:text-[38px]">Escolha sua tirzepatida</h1>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">Escolha sua apresentação de tirzepatida e tenha resultado no seu protocolo de controle de peso e saúde metabólica.</p>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">Conheça as apresentações disponíveis para protocolos individualizados, sempre com prescrição e acompanhamento profissional.</p>
                 <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#C9C6F0] px-3 py-2 text-[11px] font-bold text-[#0D1B2A]">
                   <span aria-hidden>✓</span> Atendimento personalizado com {sellers[seller]}
                 </div>
               </div>
             </section>
+            <aside className="mb-6 flex flex-col gap-2 rounded-2xl border border-[#E6E8ED] bg-white px-4 py-3 text-sm text-[#344563] sm:flex-row sm:items-center sm:justify-between">
+              <p>Em dúvida sobre tirzepatida, procedência ou orientação? <span className="font-semibold text-[#0D1B2A]">Leia o guia antes de escolher sua apresentação.</span></p>
+              <Link href="/guia-canetas-emagrecimento" className="shrink-0 font-bold text-[#047857] underline decoration-[#A7F3D0] decoration-2 underline-offset-4 hover:text-[#065F46]">Ler guia</Link>
+            </aside>
             <div className="mb-6 flex items-end justify-between gap-4">
               <div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#344563]">Recomendados no atendimento</p><h2 className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#0D1B2A]">Itens disponíveis para seu pedido</h2></div>
               <span className="hidden text-xs text-[#344563] sm:block">{availableProducts.length} opções orientadas pela equipe</span>
