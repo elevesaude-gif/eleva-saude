@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
 import { digitalShippingOption, internalTestProduct, internalTestShippingOption, products, sellers } from "@/lib/mock-data";
@@ -138,12 +139,16 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
                 <BrandLogo negative size="small" className="mb-3" />
                 <p className="mb-4 text-[10px] font-extrabold uppercase tracking-[.2em] text-[#C9C6F0]">Ambiente privado de fechamento</p>
                 <h1 className="font-serif text-[29px] font-semibold leading-[1.08] tracking-[-.025em] sm:text-[38px]">Escolha sua tirzepatida</h1>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">Escolha sua apresentação de tirzepatida e tenha resultado no seu protocolo de controle de peso e saúde metabólica.</p>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">Conheça as apresentações disponíveis para protocolos individualizados, sempre com prescrição e acompanhamento profissional.</p>
                 <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#C9C6F0] px-3 py-2 text-[11px] font-bold text-[#0D1B2A]">
                   <span aria-hidden>✓</span> Atendimento personalizado com {sellers[seller]}
                 </div>
               </div>
             </section>
+            <aside className="mb-6 flex flex-col gap-2 rounded-2xl border border-[#E6E8ED] bg-white px-4 py-3 text-sm text-[#344563] sm:flex-row sm:items-center sm:justify-between">
+              <p>Em dúvida sobre tirzepatida, procedência ou orientação? <span className="font-semibold text-[#0D1B2A]">Leia o guia antes de escolher sua apresentação.</span></p>
+              <Link href="/guia-canetas-emagrecimento" className="shrink-0 font-bold text-[#047857] underline decoration-[#A7F3D0] decoration-2 underline-offset-4 hover:text-[#065F46]">Ler guia</Link>
+            </aside>
             <div className="mb-6 flex items-end justify-between gap-4">
               <div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#344563]">Recomendados no atendimento</p><h2 className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#0D1B2A]">Itens disponíveis para seu pedido</h2></div>
               <span className="hidden text-xs text-[#344563] sm:block">{availableProducts.length} opções orientadas pela equipe</span>
@@ -224,7 +229,7 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
 function isShippingResponse(value: unknown): value is { ok: true; options: ShippingOption[] } {
   if (!value || typeof value !== "object" || !("ok" in value) || !("options" in value)) return false;
   const response = value as { ok?: unknown; options?: unknown };
-  return response.ok === true && Array.isArray(response.options) && response.options.length > 0 && response.options.every((option) =>
+  return response.ok === true && Array.isArray(response.options) && response.options.every((option) =>
     Boolean(option && typeof option.id === "string" && typeof option.provider === "string" && typeof option.service === "string" &&
       Number.isInteger(option.priceCents) && typeof option.deliveryTime === "string" &&
       ["melhor_envio", "fallback", "teste", "digital"].includes(option.source)));

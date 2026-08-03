@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { digitalShippingOption, internalTestProduct, internalTestShippingOption, products, shippingOptions } from "@/lib/mock-data";
+import { digitalShippingOption, internalTestProduct, internalTestShippingOption, products } from "@/lib/mock-data";
 import type { Product, ShippingOption } from "@/types/checkout";
 
 export type ShippingItemInput = { id: string; quantity: number };
@@ -17,6 +17,8 @@ type MelhorEnvioQuote = {
   error?: string;
   company?: { name?: string };
 };
+
+const DEFAULT_ALLOWED_SERVICES = ["27", "31", "33"] as const;
 
 export function resolveShippingProducts(items: ShippingItemInput[], allowTestProduct = false) {
   const catalog = allowTestProduct ? [...products, internalTestProduct] : products;
@@ -48,9 +50,10 @@ export async function getShippingQuotes(input: {
 
   const token = process.env.MELHOR_ENVIO_TOKEN?.trim();
   const userAgent = process.env.MELHOR_ENVIO_USER_AGENT?.trim();
+  const allowedServices = getAllowedServices();
   if (!token || !userAgent) {
-    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "fallback", optionCount: shippingOptions.length });
-    return shippingOptions;
+    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "unavailable", optionCount: 0 });
+    return [];
   }
 
   const endpoint = process.env.MELHOR_ENVIO_ENV === "production"
@@ -67,6 +70,7 @@ export async function getShippingQuotes(input: {
         "User-Agent": userAgent,
       },
       body: JSON.stringify({
+        services: allowedServices.join(","),
         from: { postal_code: (process.env.MELHOR_ENVIO_FROM_POSTAL_CODE || "05388090").replace(/\D/g, "") },
         to: { postal_code: postalCode },
         products: shippableLines.map(({ product, quantity }) => ({
@@ -84,13 +88,21 @@ export async function getShippingQuotes(input: {
     });
 
     const body: unknown = await response.json().catch(() => undefined);
-    const options = response.ok && Array.isArray(body) ? body.flatMap(normalizeQuote) : [];
-    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: options.length ? "melhor_envio" : "fallback", optionCount: options.length || shippingOptions.length, httpStatus: response.status });
-    return options.length ? options : shippingOptions;
+    const normalized = response.ok && Array.isArray(body) ? body.flatMap(normalizeQuote) : [];
+    const options = allowedServices.flatMap((serviceId) => normalized.filter((option) => option.id === serviceId)).slice(0, 3);
+    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: options.length ? "melhor_envio" : "unavailable", optionCount: options.length, httpStatus: response.status });
+    return options;
   } catch {
-    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "fallback", optionCount: shippingOptions.length });
-    return shippingOptions;
+    logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "unavailable", optionCount: 0 });
+    return [];
   }
+}
+
+function getAllowedServices() {
+  const configured = process.env.MELHOR_ENVIO_ALLOWED_SERVICES?.split(",").map((id) => id.trim()).filter(Boolean);
+  const configuredSet = new Set(configured);
+  const validConfigured = DEFAULT_ALLOWED_SERVICES.filter((id) => configuredSet.has(id));
+  return validConfigured.length ? validConfigured : [...DEFAULT_ALLOWED_SERVICES];
 }
 
 export function sealShippingQuotes(options: ShippingOption[], context: QuoteContext) {
