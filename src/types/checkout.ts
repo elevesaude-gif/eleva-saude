@@ -12,11 +12,13 @@ export type Product = {
   icon: string;
   accent: string;
   image?: string;
+  imageAlt?: string;
   weightGrams: number;
   heightCm: number;
   widthCm: number;
   lengthCm: number;
   requiresShipping: boolean;
+  insuredValueCents?: number;
 };
 
 export type CartItem = Product & { quantity: number };

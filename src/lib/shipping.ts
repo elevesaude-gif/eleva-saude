@@ -1,7 +1,8 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { digitalShippingOption, internalTestProduct, internalTestShippingOption, products } from "@/lib/mock-data";
+import { digitalShippingOption, internalTestProduct, internalTestShippingOption } from "@/lib/mock-data";
+import { listPublicProductsWithFallback } from "@/lib/products";
 import type { Product, ShippingOption } from "@/types/checkout";
 
 export type ShippingItemInput = { id: string; quantity: number };
@@ -20,8 +21,9 @@ type MelhorEnvioQuote = {
 
 const DEFAULT_ALLOWED_SERVICES = ["27", "31", "33"] as const;
 
-export function resolveShippingProducts(items: ShippingItemInput[], allowTestProduct = false) {
-  const catalog = allowTestProduct ? [...products, internalTestProduct] : products;
+export async function resolveShippingProducts(items: ShippingItemInput[], allowTestProduct = false, authoritativeProducts?:Product[]) {
+  const publicProducts = authoritativeProducts ?? await listPublicProductsWithFallback();
+  const catalog = allowTestProduct && !authoritativeProducts ? [...publicProducts, internalTestProduct] : publicProducts;
   return items.map((item) => {
     const product = catalog.find((candidate) => candidate.id === item.id);
     if (!product || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) {
@@ -36,10 +38,11 @@ export async function getShippingQuotes(input: {
   items: ShippingItemInput[];
   subtotalCents: number;
   allowTestProduct?: boolean;
+  authoritativeProducts?:Product[];
 }): Promise<ShippingOption[]> {
   const postalCode = input.postalCode.replace(/\D/g, "");
   if (postalCode.length !== 8) throw new Error("invalid_postal_code");
-  const lines = resolveShippingProducts(input.items, input.allowTestProduct);
+  const lines = await resolveShippingProducts(input.items, input.allowTestProduct, input.authoritativeProducts);
   const canonicalSubtotal = lines.reduce((sum, { product, quantity }) => sum + getProductPriceCents(product) * quantity, 0);
   if (canonicalSubtotal !== input.subtotalCents) throw new Error("invalid_subtotal");
 

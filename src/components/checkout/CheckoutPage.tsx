@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
-import { digitalShippingOption, internalTestProduct, internalTestShippingOption, products, sellers } from "@/lib/mock-data";
-import type { Category, CustomerData, SellerSlug, ShippingOption } from "@/types/checkout";
+import { digitalShippingOption, internalTestProduct, internalTestShippingOption, sellers } from "@/lib/mock-data";
+import type { Category, CustomerData, Product, SellerSlug, ShippingOption } from "@/types/checkout";
 import { CartSummary, MobileCartBar } from "./CartSummary";
 import { CategoryTabs } from "./CategoryTabs";
 import { CheckoutHeader } from "./CheckoutHeader";
@@ -20,7 +20,7 @@ const emptyCustomer: CustomerData = {
   complement: "", neighborhood: "", city: "", state: "", reference: "",
 };
 
-export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSlug; testMode: boolean; testToken?: string }) {
+export function CheckoutPage({ seller, testMode, testToken, products }: { seller: SellerSlug; testMode: boolean; testToken?: string; products: Product[] }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [category, setCategory] = useState<Category>("Tirzepatida");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -33,7 +33,7 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
   const [couponCode, setCouponCode] = useState("");
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
-  const availableProducts = useMemo(() => testMode ? [...products, internalTestProduct] : products, [testMode]);
+  const availableProducts = useMemo(() => testMode ? [...products, internalTestProduct] : products, [products, testMode]);
 
   const items = useMemo(() => availableProducts.filter((product) => quantities[product.id]).map((product) => ({ ...product, quantity: quantities[product.id] })), [availableProducts, quantities]);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -98,14 +98,12 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((item) => ({ id: item.id, quantity: item.quantity })),
+          items: items.map((item) => ({ productId: item.id, quantity: item.quantity })),
           customer,
           seller,
           shippingId: effectiveShippingId,
           shippingQuoteToken: shipping.quoteToken,
           couponCode: couponApplied ? couponCode : undefined,
-          totalCents: Math.round(total * 100),
-          testToken,
         }),
       });
       const responseText = await response.text();
@@ -116,11 +114,12 @@ export function CheckoutPage({ seller, testMode, testToken }: { seller: SellerSl
         data = { ok: false, error: "non_json_response", message: responseText };
       }
       if (!response.ok || !isPaymentResponse(data)) {
-        throw new Error("Pagamento indisponível.");
+        const message=data&&typeof data==="object"&&"message" in data&&typeof data.message==="string"?data.message:"Pagamento indisponível.";
+        throw new Error(message);
       }
       window.location.assign(data.paymentUrl);
-    } catch {
-      setPaymentError("Não foi possível iniciar o pagamento. Tente novamente ou fale com seu atendimento.");
+    } catch (error) {
+      setPaymentError(error instanceof Error?error.message:"Não foi possível iniciar o pagamento. Tente novamente ou fale com seu atendimento.");
       setIsPaymentLoading(false);
     }
   };
