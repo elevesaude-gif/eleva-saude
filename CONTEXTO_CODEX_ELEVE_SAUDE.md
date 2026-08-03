@@ -30,8 +30,8 @@ Antes de alterar qualquer arquivo:
 - Vendedores: Isabela e Caio
 - Rotas de venda: `/isabela` e `/caio`
 - WhatsApp oficial: `+55 11 92018-0233`
-- InfiniteTag visual: `$eleve-saude`
-- Handle usado pela API: `eleve-saude` (sem `$`)
+- InfiniteTag visual: `INFINITEPAY_HANDLE=<configurado-no-Netlify>` (adicionar `$` apenas na exibição)
+- Handle usado pela API: `INFINITEPAY_HANDLE=<configurado-no-Netlify>` (sem `$`)
 
 ## Estado funcional já alcançado
 
