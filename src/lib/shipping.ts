@@ -6,6 +6,7 @@ import { listPublicProductsWithFallback } from "@/lib/products";
 import type { Product, ShippingOption } from "@/types/checkout";
 
 export type ShippingItemInput = { id: string; quantity: number };
+export class ShippingQuoteUnavailableError extends Error {}
 type QuoteContext = { postalCode: string; items: ShippingItemInput[]; subtotalCents: number };
 
 type MelhorEnvioQuote = {
@@ -43,6 +44,7 @@ export async function getShippingQuotes(input: {
   subtotalCents: number;
   allowTestProduct?: boolean;
   authoritativeProducts?: Product[];
+  reportUnavailable?: boolean;
 }): Promise<ShippingOption[]> {
   const postalCode = input.postalCode.replace(/\D/g, "");
   if (postalCode.length !== 8) throw new Error("invalid_postal_code");
@@ -57,13 +59,20 @@ export async function getShippingQuotes(input: {
 
   const token = process.env.MELHOR_ENVIO_TOKEN?.trim();
   const userAgent = process.env.MELHOR_ENVIO_USER_AGENT?.trim();
+  const environment = process.env.MELHOR_ENVIO_ENV?.trim();
+  const fromPostalCode = process.env.MELHOR_ENVIO_FROM_POSTAL_CODE?.replace(/\D/g, "") || "05388090";
   const allowedServices = getAllowedServices();
-  if (!token || !userAgent) {
+  const strictConfigurationInvalid = input.reportUnavailable && (
+    !token || !userAgent || !environment || !["sandbox", "production"].includes(environment) ||
+    !process.env.MELHOR_ENVIO_FROM_POSTAL_CODE?.trim() || fromPostalCode.length !== 8 || !allowedServices.length
+  );
+  if (!token || !userAgent || strictConfigurationInvalid) {
     logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "unavailable", optionCount: 0 });
+    if (input.reportUnavailable) throw new ShippingQuoteUnavailableError("shipping_not_configured");
     return [];
   }
 
-  const endpoint = process.env.MELHOR_ENVIO_ENV === "production"
+  const endpoint = environment === "production"
     ? "https://www.melhorenvio.com.br/api/v2/me/shipment/calculate"
     : "https://sandbox.melhorenvio.com.br/api/v2/me/shipment/calculate";
 
@@ -78,7 +87,7 @@ export async function getShippingQuotes(input: {
       },
       body: JSON.stringify({
         services: allowedServices.join(","),
-        from: { postal_code: (process.env.MELHOR_ENVIO_FROM_POSTAL_CODE || "05388090").replace(/\D/g, "") },
+        from: { postal_code: fromPostalCode },
         to: { postal_code: postalCode },
         products: shippableLines.map(({ product, quantity }) => ({
           id: product.id,
@@ -102,9 +111,14 @@ export async function getShippingQuotes(input: {
         .slice(0, 3)
       : [];
     logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: options.length ? "melhor_envio" : "unavailable", optionCount: options.length, httpStatus: response.status });
+    if (input.reportUnavailable && !options.length) throw new ShippingQuoteUnavailableError(response.ok ? "shipping_options_unavailable" : "shipping_provider_error");
     return options;
-  } catch {
+  } catch (error) {
     logQuote({ postalCode, itemCount: shippableLines.length, quoteSource: "unavailable", optionCount: 0 });
+    if (input.reportUnavailable) {
+      if (error instanceof ShippingQuoteUnavailableError) throw error;
+      throw new ShippingQuoteUnavailableError("shipping_provider_unavailable");
+    }
     return [];
   }
 }
@@ -178,6 +192,7 @@ function getProductPriceCents(product: Product) {
 }
 
 function logQuote(input: { postalCode: string; itemCount: number; quoteSource: string; optionCount: number; httpStatus?: number }) {
+  if (process.env.NODE_ENV !== "development") return;
   console.info("[shipping_quote]", {
     postal_code: `${input.postalCode.slice(0, 5)}***`,
     item_count: input.itemCount,

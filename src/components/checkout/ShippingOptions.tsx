@@ -1,18 +1,19 @@
 import { formatCurrency } from "@/lib/currency";
 import type { ShippingOption } from "@/types/checkout";
 
-type Props = { options: ShippingOption[]; selected: string; onSelect: (id: string) => void; loading?: boolean; waitingForZip?: boolean };
+type Props = { options: ShippingOption[]; selected: string; onSelect: (id: string) => void; loading?: boolean; waitingForZip?: boolean; error?: string };
 
-export function ShippingOptions({ options, selected, onSelect, loading, waitingForZip }: Props) {
+export function ShippingOptions({ options, selected, onSelect, loading, waitingForZip, error }: Props) {
   return (
     <section className="checkout-card">
       <div className="section-heading">
         <span className="section-icon">↗</span>
         <div><p className="section-kicker">Forma de entrega</p><h2 className="section-title">Como deseja receber?</h2><p className="section-description">Escolha a opção que combina com seu momento.</p></div>
       </div>
-      {loading && <div role="status" className="flex items-center gap-2 rounded-2xl bg-[#F7F8FA] p-4 text-sm font-semibold text-[#344563]"><span className="size-4 animate-spin rounded-full border-2 border-[#C9C6F0] border-t-[#0D1B2A]" /> Calculando as melhores opções de frete...</div>}
+      {loading && <div role="status" className="flex items-center gap-2 rounded-2xl bg-[#F7F8FA] p-4 text-sm font-semibold text-[#344563]"><span className="size-4 animate-spin rounded-full border-2 border-[#C9C6F0] border-t-[#0D1B2A]" /> Calculando frete...</div>}
       {!loading && waitingForZip && <p className="rounded-2xl bg-[#F7F8FA] p-4 text-sm text-[#344563]">Informe um CEP válido para calcular o frete.</p>}
-      {!loading && !waitingForZip && options.length === 0 && <p role="alert" className="rounded-2xl border border-[#C9C6F0] bg-[#F7F8FA] p-4 text-sm leading-6 text-[#344563]">Não encontramos entrega automática para este CEP. Fale com seu atendimento para concluir o pedido.</p>}
+      {!loading && !waitingForZip && error && <p role="alert" className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-4 text-sm leading-6 text-[#991B1B]">{error}</p>}
+      {!loading && !waitingForZip && !error && options.length === 0 && <p role="alert" className="rounded-2xl border border-[#C9C6F0] bg-[#F7F8FA] p-4 text-sm leading-6 text-[#344563]">Não encontramos entrega automática para este CEP. Fale com seu atendimento para concluir o pedido.</p>}
       {!loading && !waitingForZip && options.length > 0 && <div className="grid gap-3 sm:grid-cols-3">
         {options.map((option) => {
           const active = selected === option.id;
