@@ -1,4 +1,4 @@
-import { getShippingQuotes, sealShippingQuotes } from "@/lib/shipping";
+import { getShippingQuotes, sealShippingQuotes, ShippingQuoteUnavailableError } from "@/lib/shipping";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       return Response.json({ ok: false, error: "invalid_request" }, { status: 400 });
     }
     const allowTestProduct = Boolean(process.env.TEST_PRODUCT_TOKEN) && input.testToken === process.env.TEST_PRODUCT_TOKEN;
-    const options = sealShippingQuotes(await getShippingQuotes({ ...input, allowTestProduct }), {
+    const options = sealShippingQuotes(await getShippingQuotes({ ...input, allowTestProduct, reportUnavailable: true }), {
       postalCode: input.postalCode,
       items: input.items,
       subtotalCents: input.subtotalCents,
@@ -25,8 +25,11 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, options });
   } catch (error) {
     const message = error instanceof Error ? error.message : "invalid_request";
-    const status = message.startsWith("invalid_") ? 400 : 500;
-    return Response.json({ ok: false, error: message }, { status });
+    const status = message.startsWith("invalid_") ? 400 : error instanceof ShippingQuoteUnavailableError ? 503 : 500;
+    const publicMessage = error instanceof ShippingQuoteUnavailableError
+      ? "Não foi possível calcular o frete agora. Confira o CEP ou tente novamente em instantes."
+      : "Não foi possível processar a solicitação de frete.";
+    return Response.json({ ok: false, error: message, message: publicMessage }, { status });
   }
 }
 

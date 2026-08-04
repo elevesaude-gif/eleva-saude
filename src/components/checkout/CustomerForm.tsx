@@ -16,33 +16,38 @@ export function CustomerForm({ data, onChange }: Props) {
   useEffect(() => {
     const zipCode = digits(data.zipCode);
     if (zipCode.length !== 8) return;
-
     const controller = new AbortController();
-    fetch(`https://viacep.com.br/ws/${zipCode}/json/`, { signal: controller.signal })
+    const timer = window.setTimeout(() => {
+      setZipStatus("loading");
+      void fetch(`/api/address/lookup?postalCode=${zipCode}`, { signal: controller.signal })
       .then(async (response) => {
-        if (!response.ok) throw new Error("viacep_http_error");
-        return response.json() as Promise<{ erro?: boolean; logradouro?: string; bairro?: string; localidade?: string; uf?: string }>;
+        const body: unknown = await response.json();
+        if (!response.ok || !isAddressResponse(body)) {
+          const code = body && typeof body === "object" && "error" in body && typeof body.error === "string" ? body.error : "address_lookup_failed";
+          throw new Error(code);
+        }
+        return body;
       })
       .then((address) => {
-        if (address.erro) {
-          setZipStatus("not_found");
-          return;
-        }
         onChange((current) => ({
           ...current,
-          street: address.logradouro || current.street,
-          neighborhood: address.bairro || current.neighborhood,
-          city: address.localidade || current.city,
-          state: address.uf || current.state,
+          street: address.street || current.street,
+          neighborhood: address.neighborhood || current.neighborhood,
+          city: address.city || current.city,
+          state: address.state || current.state,
         }));
         setZipStatus("found");
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setZipStatus("error");
+        setZipStatus(error instanceof Error && error.message === "address_not_found" ? "not_found" : "error");
       });
+    }, 250);
 
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [data.zipCode, onChange]);
 
   const update = (event: ChangeEvent<HTMLInputElement>) => {
@@ -53,7 +58,7 @@ export function CustomerForm({ data, onChange }: Props) {
     if (name === "zipCode") value = maskZip(value);
     if (name === "state") value = value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2);
 
-    if (name === "zipCode") setZipStatus(digits(value).length === 8 ? "loading" : "idle");
+    if (name === "zipCode") setZipStatus("idle");
 
     onChange((current) => ({ ...current, [name]: value }));
   };
@@ -113,9 +118,15 @@ export function CustomerForm({ data, onChange }: Props) {
 }
 
 function zipStatusMessage(status: ZipStatus) {
-  if (status === "loading") return "Buscando CEP...";
+  if (status === "loading") return "Buscando endereço...";
   if (status === "found") return "Endereço encontrado. Confira o número e complemento.";
   if (status === "not_found") return "CEP não encontrado. Preencha o endereço manualmente.";
   if (status === "error") return "Erro ao consultar CEP. Preencha o endereço manualmente.";
   return "Digite o CEP para buscar o endereço";
+}
+
+function isAddressResponse(value: unknown): value is { street: string; neighborhood: string; city: string; state: string } {
+  if (!value || typeof value !== "object") return false;
+  const address = value as Record<string, unknown>;
+  return typeof address.street === "string" && typeof address.neighborhood === "string" && typeof address.city === "string" && typeof address.state === "string";
 }

@@ -29,6 +29,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [isShippingLoading, setIsShippingLoading] = useState(false);
   const [quotedPostalCode, setQuotedPostalCode] = useState("");
+  const [shippingError, setShippingError] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
@@ -64,6 +65,8 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
       setIsShippingLoading(true);
       setShippingOptions([]);
       setShippingId("");
+      setShippingError("");
+      setQuotedPostalCode("");
       try {
         const response = await fetch("/api/shipping/quote", {
           method: "POST",
@@ -72,7 +75,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
           signal: controller.signal,
         });
         const body: unknown = await response.json();
-        if (!response.ok || !isShippingResponse(body)) throw new Error("shipping_quote_failed");
+        if (!response.ok || !isShippingResponse(body)) throw new Error(shippingErrorMessage(body));
         setShippingOptions(body.options);
         setShippingId(body.options[0]?.id ?? "");
         setQuotedPostalCode(postalCode);
@@ -80,6 +83,8 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
         if (error instanceof DOMException && error.name === "AbortError") return;
         setShippingOptions([]);
         setShippingId("");
+        setQuotedPostalCode(postalCode);
+        setShippingError(error instanceof Error ? error.message : "Não foi possível calcular o frete. Tente novamente.");
       } finally {
         if (!controller.signal.aborted) setIsShippingLoading(false);
       }
@@ -184,7 +189,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
                   </div>
                 </section>
                 <CustomerForm data={customer} onChange={setCustomer} />
-                <ShippingOptions options={effectiveShippingOptions} selected={effectiveShippingId} onSelect={setShippingId} loading={shippingLoading} waitingForZip={hasShippableItems && !validPostalCode} />
+                <ShippingOptions options={effectiveShippingOptions} selected={effectiveShippingId} onSelect={setShippingId} loading={shippingLoading} waitingForZip={hasShippableItems && !validPostalCode} error={validPostalCode && quotedPostalCode === postalCode ? shippingError : ""} />
                 <CouponBox seller={seller} applied={couponApplied} onApply={(applied, code) => { setCouponApplied(applied); setCouponCode(code); }} />
               </div>
               <aside className="overflow-hidden rounded-[28px] border border-[#E6E8ED] bg-white shadow-[0_18px_55px_rgba(13,27,42,.09)] lg:sticky lg:top-28">
@@ -232,6 +237,11 @@ function isShippingResponse(value: unknown): value is { ok: true; options: Shipp
     Boolean(option && typeof option.id === "string" && typeof option.provider === "string" && typeof option.service === "string" &&
       Number.isInteger(option.priceCents) && typeof option.deliveryTime === "string" &&
       ["melhor_envio", "fallback", "teste", "digital"].includes(option.source)));
+}
+
+function shippingErrorMessage(value: unknown) {
+  if (value && typeof value === "object" && "message" in value && typeof value.message === "string") return value.message;
+  return "Não foi possível calcular o frete. Confira o CEP e tente novamente.";
 }
 
 function isPaymentResponse(value: unknown): value is { ok: true; orderId: string; orderNsu: string; paymentUrl: string } {
