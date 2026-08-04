@@ -5,7 +5,9 @@ import { connection } from "next/server";
 export { isSafeContentUrl } from "@/lib/content-validation";
 
 export const sectionTypes = ["hero","section","highlight","image","list","comparison","faq","cta"] as const;
-export type GuideSection = { id?:string; section_type:typeof sectionTypes[number]; sort_order:number; active:boolean; content:Record<string,unknown> };
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key:string]:JsonValue };
+export type GuideContent = { [key:string]:JsonValue };
+export type GuideSection = { id?:string; section_type:typeof sectionTypes[number]; sort_order:number; active:boolean; content:GuideContent };
 export type GuidePage = { id:string; slug:string; title:string; description:string|null; active:boolean; published_at:string|null; sections:GuideSection[] };
 
 const guideSlug="guia-canetas-emagrecimento";
@@ -32,20 +34,24 @@ export async function getPublishedGuide(): Promise<GuidePage|null> {
 }
 
 export function isGuideSections(value:unknown): value is GuideSection[] {
-  return Array.isArray(value)&&value.length<=60&&value.every(isGuideSection);
+  return Array.isArray(value)&&value.length>0&&value.length<=60&&value.every(isGuideSection);
 }
 
-const maxText=4000,maxItems=30;
-function isText(value:unknown,max=maxText){return value===undefined||(typeof value==="string"&&value.length<=max&&!/[<>]/.test(value));}
-function isStringList(value:unknown){return value===undefined||(Array.isArray(value)&&value.length<=maxItems&&value.every(item=>isText(item,500)));}
-function isObjectItems(value:unknown){return value===undefined||(Array.isArray(value)&&value.length<=maxItems&&value.every(raw=>{if(!raw||typeof raw!=="object"||Array.isArray(raw))return false;const item=raw as Record<string,unknown>;return Object.keys(item).every(key=>["title","text","description","left","right"].includes(key))&&Object.values(item).every(itemValue=>isText(itemValue,1000));}));}
+const maxText=12000,maxItems=100,maxDepth=8;
+function isSafeJson(value:unknown,key="",depth=0):value is JsonValue{
+  if(depth>maxDepth)return false;
+  if(value===null||typeof value==="boolean"||(typeof value==="number"&&Number.isFinite(value)))return true;
+  if(typeof value==="string"){
+    if(value.length>maxText||/[<>]/.test(value))return false;
+    return !/(?:url|href|src)$/i.test(key)||isSafeContentUrl(value);
+  }
+  if(Array.isArray(value))return value.length<=maxItems&&value.every(item=>isSafeJson(item,key,depth+1));
+  if(typeof value!=="object"||!value)return false;
+  const entries=Object.entries(value as Record<string,unknown>);
+  return entries.length<=100&&entries.every(([childKey,child])=>childKey.length<=100&&isSafeJson(child,childKey,depth+1));
+}
 function isGuideSection(value:unknown):value is GuideSection{
   if(!value||typeof value!=="object"||Array.isArray(value))return false;const section=value as GuideSection;
   if(!sectionTypes.includes(section.section_type)||!Number.isInteger(section.sort_order)||section.sort_order<0||typeof section.active!=="boolean"||!section.content||typeof section.content!=="object"||Array.isArray(section.content))return false;
-  const c=section.content;const allowed=new Set(["eyebrow","title","subtitle","body","caption","imageUrl","imageAlt","ctaText","ctaUrl","paragraphs","items"]);
-  if(!Object.keys(c).every(key=>allowed.has(key)))return false;
-  if(!["eyebrow","title","subtitle","body","caption","imageAlt","ctaText"].every(key=>isText(c[key])))return false;
-  if(!isSafeContentUrl(c.imageUrl)||!isSafeContentUrl(c.ctaUrl)||!isStringList(c.paragraphs))return false;
-  if(section.section_type==="faq"||section.section_type==="comparison")return isObjectItems(c.items);
-  return isStringList(c.items);
+  return (!section.id||/^[0-9a-f-]{36}$/i.test(section.id))&&isSafeJson(section.content);
 }

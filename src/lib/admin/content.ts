@@ -1,6 +1,27 @@
 import "server-only";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { GuideSection } from "@/lib/guide-content";
+import preparedGuide from "@/content/guide-cms.json";
+
+const preparedSections=preparedGuide.sections as unknown as GuideSection[];
+const stringValue=(value:unknown)=>typeof value==="string"?value:"";
+
+function mergeWithPreparedSections(stored:GuideSection[]){
+  const used=new Set<string>();
+  return preparedSections.map(prepared=>{
+    const key=stringValue(prepared.content.sectionKey);
+    const title=stringValue(prepared.content.title);
+    const match=stored.find(section=>!used.has(section.id??"")&&(
+      (key&&stringValue(section.content.sectionKey)===key)||
+      (title&&stringValue(section.content.title)===title)||
+      (section.section_type===prepared.section_type&&section.sort_order===prepared.sort_order)
+    ));
+    if(match?.id)used.add(match.id);
+    const alreadyCanonical=Boolean(key&&stringValue(match?.content.sectionKey)===key);
+    const content=alreadyCanonical?{...prepared.content,...match?.content}:{...match?.content,...prepared.content};
+    return {...prepared,id:match?.id,active:match?.active??prepared.active,content};
+  }).sort((a,b)=>a.sort_order-b.sort_order);
+}
 
 export async function getGuideForAdmin(){
   const supabase=getSupabaseServerClient();
@@ -9,7 +30,7 @@ export async function getGuideForAdmin(){
   if(!page) return null;
   const {data:sections,error:sectionError}=await supabase.from("content_sections").select("id,section_type,sort_order,active,content").eq("page_id",page.id).order("sort_order");
   if(sectionError) throw new Error(sectionError.message);
-  return {...page,sections:(sections??[]) as GuideSection[]};
+  return {...page,sections:mergeWithPreparedSections((sections??[]) as GuideSection[])};
 }
 
 export async function saveGuide(input:{title:string;description:string;active:boolean;sections:GuideSection[]}){
@@ -21,13 +42,18 @@ export async function saveGuide(input:{title:string;description:string;active:bo
 
   const persistedIds:string[]=[];
   for(const [index,section] of input.sections.entries()){
-    const values={page_id:page.id,section_type:section.section_type,sort_order:index,active:section.active,content:section.content,updated_at:now};
+    const sortOrder=index*10;
     if(section.id){
+      const {data:existing,error:readError}=await supabase.from("content_sections").select("content").eq("id",section.id).eq("page_id",page.id).maybeSingle();
+      if(readError)throw new Error(`Falha ao ler a seção ${section.id}: ${readError.message}`);
+      if(!existing)throw new Error(`A seção ${section.id} não existe nesta página; recarregue o editor.`);
+      const values={page_id:page.id,section_type:section.section_type,sort_order:sortOrder,active:section.active,content:{...(existing.content??{}),...section.content},updated_at:now};
       const {data,error:sectionError}=await supabase.from("content_sections").update(values).eq("id",section.id).eq("page_id",page.id).select("id").maybeSingle();
       if(sectionError) throw new Error(`Falha ao atualizar a seção ${section.id}: ${sectionError.message}`);
       if(!data) throw new Error(`Nenhuma linha foi atualizada para a seção ${section.id}.`);
       persistedIds.push(data.id);
     }else{
+      const values={page_id:page.id,section_type:section.section_type,sort_order:sortOrder,active:section.active,content:section.content,updated_at:now};
       const {data,error:sectionError}=await supabase.from("content_sections").insert(values).select("id").single();
       if(sectionError) throw new Error(`Falha ao inserir uma seção do guia: ${sectionError.message}`);
       if(!data) throw new Error("O Supabase não confirmou a inserção de uma seção do guia.");
@@ -35,13 +61,8 @@ export async function saveGuide(input:{title:string;description:string;active:bo
     }
   }
 
-  let staleQuery=supabase.from("content_sections").delete().eq("page_id",page.id);
-  if(persistedIds.length) staleQuery=staleQuery.not("id","in",`(${persistedIds.join(",")})`);
-  const {error:deleteError}=await staleQuery;
-  if(deleteError) throw new Error(`Falha ao remover seções antigas do guia: ${deleteError.message}`);
-
-  const {data:confirmed,error:confirmError}=await supabase.from("content_sections").select("id").eq("page_id",page.id);
+  const {data:confirmed,error:confirmError}=await supabase.from("content_sections").select("id").eq("page_id",page.id).in("id",persistedIds);
   if(confirmError) throw new Error(`Falha ao confirmar as seções salvas: ${confirmError.message}`);
-  if((confirmed??[]).length!==input.sections.length) throw new Error("O Supabase não confirmou todas as seções do guia.");
-  return {pageId:page.id,updatedAt:page.updated_at,sectionCount:confirmed?.length??0};
+  if((confirmed??[]).length!==persistedIds.length) throw new Error("O Supabase não confirmou todas as seções do guia.");
+  return {pageId:page.id,updatedAt:page.updated_at,sectionCount:persistedIds.length};
 }
