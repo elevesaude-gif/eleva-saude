@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
+import { couponDiscountLabel, loadCoupons, saveCoupons, validateCoupon, type Coupon } from "@/lib/coupons";
 import { digitalShippingOption, internalTestProduct, internalTestShippingOption, sellers } from "@/lib/mock-data";
 import type { Category, CustomerData, Product, SellerSlug, ShippingOption } from "@/types/checkout";
 import { CartSummary, MobileCartBar } from "./CartSummary";
@@ -30,8 +31,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
   const [isShippingLoading, setIsShippingLoading] = useState(false);
   const [quotedPostalCode, setQuotedPostalCode] = useState("");
   const [shippingError, setShippingError] = useState("");
-  const [couponApplied, setCouponApplied] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const availableProducts = useMemo(() => testMode ? [...products, internalTestProduct] : products, [products, testMode]);
@@ -39,7 +39,8 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
   const items = useMemo(() => availableProducts.filter((product) => quantities[product.id]).map((product) => ({ ...product, quantity: quantities[product.id] })), [availableProducts, quantities]);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discount = couponApplied ? subtotal * 0.1 : 0;
+  const couponResult = appliedCoupon ? validateCoupon([appliedCoupon], appliedCoupon.code, seller, subtotal) : null;
+  const discount = couponResult?.valid ? couponResult.discount : 0;
   const filtered = useMemo(() => availableProducts.filter((product) => product.category === category), [availableProducts, category]);
   const setQuantity = (id: string, delta: number) => setQuantities((current) => ({ ...current, [id]: Math.max(0, (current[id] ?? 0) + delta) }));
   const goToSummary = () => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -108,7 +109,8 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
           seller,
           shippingId: effectiveShippingId,
           shippingQuoteToken: shipping.quoteToken,
-          couponCode: couponApplied ? couponCode : undefined,
+          couponCode: couponResult?.valid ? appliedCoupon?.code : undefined,
+          coupon: couponResult?.valid ? appliedCoupon : undefined,
         }),
       });
       const responseText = await response.text();
@@ -122,6 +124,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
         const message=data&&typeof data==="object"&&"message" in data&&typeof data.message==="string"?data.message:"Pagamento indisponível.";
         throw new Error(message);
       }
+      if (appliedCoupon) saveCoupons(loadCoupons().map((coupon) => coupon.id === appliedCoupon.id ? { ...coupon, currentUses: coupon.currentUses + 1 } : coupon));
       window.location.assign(data.paymentUrl);
     } catch (error) {
       setPaymentError(error instanceof Error?error.message:"Não foi possível iniciar o pagamento. Tente novamente ou fale com seu atendimento.");
@@ -190,7 +193,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
                 </section>
                 <CustomerForm data={customer} onChange={setCustomer} />
                 <ShippingOptions options={effectiveShippingOptions} selected={effectiveShippingId} onSelect={setShippingId} loading={shippingLoading} waitingForZip={hasShippableItems && !validPostalCode} error={validPostalCode && quotedPostalCode === postalCode ? shippingError : ""} />
-                <CouponBox seller={seller} applied={couponApplied} onApply={(applied, code) => { setCouponApplied(applied); setCouponCode(code); }} />
+                <CouponBox seller={seller} subtotal={subtotal} appliedCoupon={appliedCoupon} onApply={setAppliedCoupon} />
               </div>
               <aside className="overflow-hidden rounded-[28px] border border-[#E6E8ED] bg-white shadow-[0_18px_55px_rgba(13,27,42,.09)] lg:sticky lg:top-28">
                 <div className="bg-[#0D1B2A] p-5 text-white">
@@ -201,7 +204,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
                 <div className="p-5">
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between"><span className="text-[#344563]">Itens ({itemCount})</span><span className="font-semibold">{formatCurrency(subtotal)}</span></div>
-                    {couponApplied && <div className="flex justify-between rounded-lg bg-[#C9C6F0]/40 px-2 py-1.5 text-[#0D1B2A]"><span>Desconto de 10%</span><strong>− {formatCurrency(discount)}</strong></div>}
+                    {couponResult?.valid && appliedCoupon && <div className="flex justify-between rounded-lg bg-[#C9C6F0]/40 px-2 py-1.5 text-[#0D1B2A]"><span>Desconto de {couponDiscountLabel(appliedCoupon)}</span><strong>− {formatCurrency(discount)}</strong></div>}
                     <div className="flex justify-between"><span className="text-[#344563]">Frete</span><span className="font-semibold">{shipping ? formatCurrency(shipping.priceCents / 100) : "A calcular"}</span></div>
                     {shipping && <div className="rounded-xl bg-[#F7F8FA] p-3 text-xs text-[#344563]"><strong className="block text-[#0D1B2A]">{shipping.provider} · {shipping.service}</strong><span>{shipping.deliveryTime}</span></div>}
                   </div>

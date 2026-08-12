@@ -17,6 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin">Pedidos</Link>
             <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin/content/guide">Conteúdo</Link>
             <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin/products">Produtos</Link>
+            <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin/cupons">Cupons</Link>
           </nav>
           <div className="flex items-center gap-3">
             <span className="hidden text-xs font-semibold text-[#344563] sm:inline">Painel operacional</span>
@@ -27,7 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
       <nav className="flex gap-1 overflow-x-auto border-b border-[#E6E8ED] bg-white px-4 py-2 md:hidden" aria-label="Administração">
-        <Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/overview">Visão geral</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin">Pedidos</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/content/guide">Conteúdo</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/products">Produtos</Link>
+        <Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/overview">Visão geral</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin">Pedidos</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/content/guide">Conteúdo</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/products">Produtos</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/cupons">Cupons</Link>
       </nav>
       {children}
     </div>

@@ -34,7 +34,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -109,7 +110,13 @@ button:disabled {
 
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--brand-lavender);
   outline-offset: 2px;
+}
+
+.admin-input {
+  width: 100%; border: 1px solid var(--brand-mist); border-radius: 12px; background: white;
+  padding: 10px 12px; color: var(--brand-petroleum); font-size: 14px; font-weight: 600;
 }
