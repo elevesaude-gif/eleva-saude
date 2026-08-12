@@ -14,10 +14,7 @@ type AnalyticsWindow = Window & {
   gtag?: (
     action: string,
     event: string,
-    parameters?: Record<
-      string,
-      string | number | (() => void)
-    >,
+    parameters?: Record<string, string | number | (() => void)>,
   ) => void;
 };
 
@@ -75,7 +72,7 @@ export function WhatsAppGroupCta({
 
     try {
       /*
-       * Última origem conhecida.
+       * Última origem conhecida da visita atual.
        */
       sessionStorage.setItem(
         "eleve_tracking",
@@ -83,8 +80,8 @@ export function WhatsAppGroupCta({
       );
 
       /*
-       * First touch:
-       * preserva a primeira origem que trouxe esse navegador.
+       * FIRST TOUCH
+       * Preserva a primeira origem que trouxe esse navegador.
        */
       if (!localStorage.getItem("eleve_first_touch")) {
         localStorage.setItem(
@@ -97,8 +94,8 @@ export function WhatsAppGroupCta({
       }
 
       /*
-       * Last touch:
-       * atualiza sempre que houver nova visita.
+       * LAST TOUCH
+       * Atualiza a origem mais recente a cada nova visita.
        */
       localStorage.setItem(
         "eleve_last_touch",
@@ -108,8 +105,10 @@ export function WhatsAppGroupCta({
         }),
       );
     } catch {
-      // Storage pode estar indisponível em navegadores
-      // com restrições de privacidade.
+      /*
+       * Storage pode estar indisponível em navegadores
+       * com restrições de privacidade.
+       */
     }
   }, []);
 
@@ -120,11 +119,14 @@ export function WhatsAppGroupCta({
     const tracking = getTrackingData();
 
     /*
-     * META PIXEL
+     * ==========================================================
+     * META PIXEL — EVENTO PERSONALIZADO
+     * ==========================================================
      *
-     * Evento propositalmente genérico.
-     * Não enviamos peso, medicamento, dose, condição,
-     * diagnóstico ou outros dados relacionados à saúde.
+     * Mantemos JoinGroupClick para nossa inteligência de funil.
+     *
+     * Não enviamos peso, medicamento, dose, condição médica,
+     * diagnóstico ou qualquer outro dado sensível de saúde.
      */
     analyticsWindow.fbq?.(
       "trackCustom",
@@ -136,10 +138,29 @@ export function WhatsAppGroupCta({
     );
 
     /*
-     * GOOGLE ANALYTICS 4
+     * ==========================================================
+     * META PIXEL — EVENTO PADRÃO
+     * ==========================================================
      *
-     * Aqui conseguimos cruzar o clique com IDs
-     * da campanha, conjunto e anúncio.
+     * Lead = pessoa que clicou para avançar ao Grupo VIP.
+     *
+     * IMPORTANTE:
+     * Isso mede o clique para o grupo.
+     * Não significa necessariamente que a pessoa entrou
+     * efetivamente no grupo do WhatsApp.
+     */
+    analyticsWindow.fbq?.(
+      "track",
+      "Lead",
+    );
+
+    /*
+     * ==========================================================
+     * GOOGLE ANALYTICS 4
+     * ==========================================================
+     *
+     * O evento join_group_click permite cruzar a ação
+     * com campanha, conjunto, anúncio e posicionamento.
      */
     analyticsWindow.gtag?.(
       "event",
@@ -155,6 +176,10 @@ export function WhatsAppGroupCta({
         ad_id: tracking.ad_id,
         placement: tracking.placement,
 
+        /*
+         * Dá um pequeno tempo para o GA4 registrar o evento
+         * antes do redirecionamento.
+         */
         event_callback: () => {
           window.location.assign(REDIRECT_URL);
         },
@@ -164,8 +189,8 @@ export function WhatsAppGroupCta({
     );
 
     /*
-     * Caso GA4 não esteja carregado,
-     * o redirecionamento continua funcionando.
+     * Caso o GA4 não esteja carregado,
+     * o redirecionamento continua funcionando normalmente.
      */
     if (!analyticsWindow.gtag) {
       window.location.assign(REDIRECT_URL);
@@ -174,13 +199,11 @@ export function WhatsAppGroupCta({
 
     /*
      * Segurança adicional:
-     * mesmo se o Analytics não executar callback,
-     * ninguém fica preso na página.
+     * mesmo que o callback do Analytics não seja executado,
+     * o usuário nunca fica preso na landing page.
      */
     window.setTimeout(() => {
-      if (window.location.pathname !== "/entrar") {
-        window.location.assign(REDIRECT_URL);
-      }
+      window.location.assign(REDIRECT_URL);
     }, 900);
   }
 
