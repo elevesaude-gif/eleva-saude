@@ -41,7 +41,7 @@ export default function Home() {
 
             <h1 id="titulo-principal" className={styles.title}>
               “É do Paraguai?”
-              <span>Sim. Agora faça as perguntas certas.</span>
+              <span>Sim. Entre no Grupo e tire todas as suas dúvidas.</span>
             </h1>
 
             <p className={styles.lead}>
@@ -79,9 +79,7 @@ export default function Home() {
         </section>
 
         <div className={styles.footer}>
-          Conteúdo informativo. Informações compartilhadas no grupo não substituem
-          avaliação, diagnóstico, prescrição ou acompanhamento individual por
-          profissional habilitado.
+          Conteúdo informativo. Fique por dentro sobre todos os tratamentos com canetas emagrecedoras.
         </div>
       </div>
     </main>
