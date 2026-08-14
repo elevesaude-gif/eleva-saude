@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { WhatsAppTestimonials } from "@/components/social-proof/WhatsAppTestimonials";
 import { formatCurrency } from "@/lib/currency";
 import { couponDiscountLabel, loadCoupons, saveCoupons, validateCoupon, type Coupon } from "@/lib/coupons";
 import { digitalShippingOption, internalTestProduct, internalTestShippingOption, sellers } from "@/lib/mock-data";
@@ -167,6 +168,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
               </div>
               <CartSummary items={items} subtotal={subtotal} sellerName={sellers[seller]} onAdd={(id) => setQuantity(id, 1)} onRemove={(id) => setQuantity(id, -1)} onContinue={goToSummary} />
             </div>
+            <WhatsAppTestimonials />
             <MobileCartBar items={items} subtotal={subtotal} onContinue={goToSummary} />
           </>
         ) : (
@@ -194,6 +196,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
                 <CustomerForm data={customer} onChange={setCustomer} />
                 <ShippingOptions options={effectiveShippingOptions} selected={effectiveShippingId} onSelect={setShippingId} loading={shippingLoading} waitingForZip={hasShippableItems && !validPostalCode} error={validPostalCode && quotedPostalCode === postalCode ? shippingError : ""} />
                 <CouponBox seller={seller} subtotal={subtotal} appliedCoupon={appliedCoupon} onApply={setAppliedCoupon} />
+                <WhatsAppTestimonials compact />
               </div>
               <aside className="overflow-hidden rounded-[28px] border border-[#E6E8ED] bg-white shadow-[0_18px_55px_rgba(13,27,42,.09)] lg:sticky lg:top-28">
                 <div className="bg-[#0D1B2A] p-5 text-white">
