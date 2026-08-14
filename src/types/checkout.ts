@@ -1,4 +1,4 @@
-export type SellerSlug = "isabela" | "caio";
+export type SellerSlug = "isabela" | "caio" | "bruno";
 
 export type Category = "Tirzepatida" | "Suplementos" | "Shopping";
 

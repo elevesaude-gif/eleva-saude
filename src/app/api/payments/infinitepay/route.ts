@@ -3,7 +3,7 @@ import {
   InfinitePayError,
   type InfinitePayItem,
 } from "@/lib/infinitepay";
-import { sellers } from "@/lib/sellers";
+import { isSellerSlug, sellers } from "@/lib/sellers";
 import { getAuthoritativeProductsByIds, InvalidAuthoritativeProductError, ProductValidationUnavailableError } from "@/lib/products";
 import { calculateAuthoritativeSubtotal } from "@/lib/product-validation";
 import { createOrderWithItems, recordCheckoutFailure, updateOrderPaymentUrl } from "@/lib/orders";
@@ -200,7 +200,7 @@ function isCheckoutRequest(value: unknown): value is CheckoutRequest {
   const input = value as Partial<CheckoutRequest>;
   if(!Object.keys(value).every(key=>["items","customer","seller","shippingId","shippingQuoteToken","couponCode","coupon"].includes(key)))return false;
   return (
-    (input.seller === "isabela" || input.seller === "caio") && Array.isArray(input.items) && input.items.length > 0 &&
+    isSellerSlug(input.seller) && Array.isArray(input.items) && input.items.length > 0 &&
     input.items.length <= 100 && input.items.every((item) => Boolean(item && Object.keys(item).length===2 && typeof item.productId === "string" &&
       Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 99)) &&
     new Set(input.items.map((item) => item.productId)).size === input.items.length && Boolean(input.customer && hasRequiredCustomerData(input.customer)) &&
@@ -213,7 +213,7 @@ function isCouponPayload(value: unknown): value is Coupon {
   if (!value || typeof value !== "object") return false;
   const coupon = value as Partial<Coupon>;
   return Object.keys(value).every((key) => ["id","code","seller","discountType","discountValue","minimumPurchase","maximumUses","currentUses","startsAt","expiresAt","active"].includes(key)) &&
-    typeof coupon.id === "string" && typeof coupon.code === "string" && ["isabela","caio","todos"].includes(coupon.seller ?? "") && ["percentual","fixo"].includes(coupon.discountType ?? "") &&
+    typeof coupon.id === "string" && typeof coupon.code === "string" && ["isabela","caio","bruno","todos"].includes(coupon.seller ?? "") && ["percentual","fixo"].includes(coupon.discountType ?? "") &&
     [coupon.discountValue,coupon.minimumPurchase,coupon.maximumUses,coupon.currentUses].every((number) => typeof number === "number" && Number.isFinite(number) && number >= 0) &&
     typeof coupon.startsAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(coupon.startsAt) && typeof coupon.expiresAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(coupon.expiresAt) && typeof coupon.active === "boolean";
 }

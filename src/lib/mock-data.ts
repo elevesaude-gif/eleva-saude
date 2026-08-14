@@ -1,9 +1,7 @@
-import type { Category, Product, SellerSlug, ShippingOption } from "@/types/checkout";
+import type { Category, Product, ShippingOption } from "@/types/checkout";
+import { sellers } from "@/lib/sellers";
 
-export const sellers: Record<SellerSlug, string> = {
-  isabela: "Isabela",
-  caio: "Caio",
-};
+export { sellers };
 
 export const categories: Category[] = ["Tirzepatida", "Suplementos", "Shopping"];
 

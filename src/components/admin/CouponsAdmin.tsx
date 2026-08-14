@@ -60,7 +60,7 @@ export function CouponsAdmin() {
 
   return <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#344563]">Vendas</p><h1 className="mt-1 font-serif text-3xl font-semibold">Cupons de desconto</h1><p className="mt-2 text-sm text-[#344563]">Cadastre e gerencie os cupons usados nos checkouts de Isabela e Caio.</p></div>
+      <div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#344563]">Vendas</p><h1 className="mt-1 font-serif text-3xl font-semibold">Cupons de desconto</h1><p className="mt-2 text-sm text-[#344563]">Cadastre e gerencie os cupons usados nos checkouts de Isabela, Caio e Bruno.</p></div>
       <button type="button" onClick={openCreate} className="rounded-xl bg-[#047857] px-5 py-3 text-sm font-bold text-white hover:bg-[#065F46]">+ Novo cupom</button>
     </div>
 
@@ -83,7 +83,7 @@ export function CouponsAdmin() {
         <div className="mb-5 flex items-center justify-between gap-4"><div><p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#344563]">Cadastro de cupom</p><h2 id="coupon-editor-title" className="mt-1 text-xl font-bold">{editor.mode === "create" ? "Novo cupom" : `Editar ${editor.coupon.code}`}</h2></div><button type="button" onClick={() => setEditor(null)} aria-label="Fechar formulário" className="rounded-lg px-3 py-2 text-xl text-[#344563] hover:bg-[#F1F2F5]">×</button></div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Label text="Código"><input required autoFocus value={editor.coupon.code} onChange={(e) => updateField("code", e.target.value.toUpperCase())} className="admin-input" placeholder="EXEMPLO10" /></Label>
-          <Label text="Vendedor"><select value={editor.coupon.seller} onChange={(e) => updateField("seller", e.target.value as Coupon["seller"])} className="admin-input"><option value="todos">Todos</option><option value="isabela">Isabela</option><option value="caio">Caio</option></select></Label>
+          <Label text="Vendedor"><select value={editor.coupon.seller} onChange={(e) => updateField("seller", e.target.value as Coupon["seller"])} className="admin-input"><option value="todos">Todos</option><option value="isabela">Isabela</option><option value="caio">Caio</option><option value="bruno">Bruno</option></select></Label>
           <Label text="Tipo de desconto"><select value={editor.coupon.discountType} onChange={(e) => updateField("discountType", e.target.value as Coupon["discountType"])} className="admin-input"><option value="percentual">Percentual</option><option value="fixo">Valor fixo</option></select></Label>
           <NumberField label="Valor do desconto" value={editor.coupon.discountValue} onChange={(value) => updateField("discountValue", value)} step="0.01" max={editor.coupon.discountType === "percentual" ? 100 : undefined} />
           <NumberField label="Valor mínimo da compra" value={editor.coupon.minimumPurchase} onChange={(value) => updateField("minimumPurchase", value)} step="0.01" />

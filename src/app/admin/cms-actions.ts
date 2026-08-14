@@ -45,4 +45,4 @@ export async function saveProductAction(_previousState:SaveProductState,form:For
 }
 export async function archiveProductAction(form:FormData){await requireAdminSession();const id=text(form,"id");if(!id)throw new Error("Produto inválido.");await archiveProduct(id);revalidateProducts();}
 export async function restoreProductAction(form:FormData){await requireAdminSession();const id=text(form,"id");if(!id)throw new Error("Produto inválido.");await restoreProduct(id);revalidateProducts();}
-function revalidateProducts(){revalidatePath("/admin/products");revalidatePath("/isabela");revalidatePath("/caio");}
+function revalidateProducts(){revalidatePath("/admin/products");revalidatePath("/isabela");revalidatePath("/caio");revalidatePath("/bruno");}
