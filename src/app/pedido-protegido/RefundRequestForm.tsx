@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import type { ChangeEvent, FormEvent, InputEvent } from "react";
+import Link from "next/link";
 import styles from "./page.module.css";
 
 type RefundFormData = { orderNumber: string; customerName: string; cpf: string; paymentMethod: string; reason: string; phone: string; email: string; details: string };
-type RefundResponse = { success?: boolean; id?: string; created_at?: string; error?: string; details?: string };
-const initialForm: RefundFormData = { orderNumber: "", customerName: "", cpf: "", paymentMethod: "", reason: "", phone: "", email: "", details: "" };
+type RefundResponse = { success?: boolean; id?: string; created_at?: string; error?: string; details?: string; message?: string };
 
 function maskCpf(value: string) {
   return value.replace(/\D/g, "").slice(0, 11).replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
@@ -32,7 +32,7 @@ function maskPhone(value: string) {
 }
 
 export function RefundRequestForm() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RefundFormData>({
     orderNumber: "",
     customerName: "",
     cpf: "",
@@ -87,27 +87,43 @@ export function RefundRequestForm() {
         cpf: onlyDigits(cpf),
         payment_method: paymentMethod,
         reason,
-        phone: getValue("phone"),
+        phone: onlyDigits(getValue("phone")),
         email: getValue("email"),
         details: getValue("details"),
       };
-      const response = await fetch("/api/refund-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      const result = await response.json() as RefundResponse;
-      if (!response.ok || result.success !== true || !result.id) {
-        console.error("[refund-request-form] API recusou a solicitação:", { status: response.status, result });
+      console.log("[refund-form] payload:", payload);
+      const response = await fetch("/api/refund-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null) as RefundResponse | null;
+        console.error("[refund-form] erro da API:", response.status, errorBody);
         setStatus("error");
-        setError("Não foi possível registrar sua solicitação agora. Tente novamente ou fale com o atendimento.");
+        setError(errorBody?.message ?? errorBody?.details ?? `A API não aceitou a solicitação (erro ${response.status}). Confira os dados e tente novamente.`);
+        return;
+      }
+
+      const result = await response.json() as RefundResponse;
+      if (result.success !== true || !result.id) {
+        console.error("[refund-form] resposta inesperada da API:", result);
+        setStatus("error");
+        setError("A solicitação foi recebida, mas a API não retornou o protocolo. Tente novamente.");
         return;
       }
       setProtocol(result.id);
-      setStatus("success"); setFormData(initialForm); setCpfTouched(false); setSubmitAttempted(false);
+      setStatus("success");
     } catch (error) {
       console.error("[refund-request-form] erro ao enviar solicitação:", error);
       setStatus("error"); setError("Não foi possível registrar sua solicitação agora. Tente novamente ou fale com o atendimento.");
     }
   }
 
-  if (status === "success") return <div className={styles.success} role="status"><div>✓</div><span>Solicitação enviada com sucesso</span><h3>Protocolo: {protocol}</h3><p><strong>Status inicial: Em análise</strong></p><p>Nossa equipe irá verificar os dados enviados e retornará pelo canal informado.</p><button type="button" onClick={() => { setProtocol(""); setStatus("idle"); }}>Enviar outra solicitação</button></div>;
+  if (status === "success") return <div className={styles.success} role="status"><div>✓</div><span>Solicitação enviada com sucesso</span><h3>Protocolo: {protocol}</h3><p><strong>Status inicial: Em análise</strong></p><p>Nossa equipe irá verificar os dados enviados e retornará pelo canal informado.</p><Link className={styles.newOrderCta} href="/caio">Quero realizar um novo pedido</Link></div>;
 
   return <form className={styles.form} onSubmit={submit} noValidate>
     <div className={styles.field}><label htmlFor="orderNumber">Número do pedido <b>*</b></label><input id="orderNumber" name="orderNumber" value={formData.orderNumber} onChange={handleChange} onInput={handleChange} required autoComplete="off" placeholder="Ex.: ELV-123456" maxLength={80}/></div>

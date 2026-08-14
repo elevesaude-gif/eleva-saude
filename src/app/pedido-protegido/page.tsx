@@ -84,6 +84,10 @@ export default function ProtectedOrderPage() {
 
       <section className={styles.notice}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 6v5c0 5.2-3.4 8.5-8 10-4.6-1.5-8-4.8-8-10V6l8-3Z"/><path d="M12 8v5M12 17h.01"/></svg><p><strong>Importante:</strong> O envio da solicitação não garante aprovação automática de estorno. Cada caso será analisado conforme os dados do pedido, forma de pagamento, status de entrega e regras aplicáveis.</p></section>
 
+      <section className={styles.newOrderSection} aria-label="Realizar um novo pedido">
+        <Link className={styles.newOrderCta} href="/caio">Quero realizar um novo pedido</Link>
+      </section>
+
       <footer className={styles.footer}><BrandLogo negative size="small"/><p>Segurança, cuidado e transparência em cada etapa.</p><nav aria-label="Links finais"><Link href="/">Voltar para a página inicial</Link><a href="https://wa.me/5511920180233?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20um%20pedido." target="_blank" rel="noopener noreferrer">Falar com atendimento</a></nav></footer>
     </main>
   );

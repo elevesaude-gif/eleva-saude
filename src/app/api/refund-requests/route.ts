@@ -22,7 +22,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const input: unknown = await request.json();
+    const body: unknown = await request.json();
+    const input = normalizeRefundInput(body);
     if (!isRefundInput(input)) return Response.json({ success: false, error: "invalid_request" }, { status: 400 });
 
     const { data, error } = await getSupabaseServerClient()
@@ -54,6 +55,16 @@ export async function POST(request: Request) {
 }
 
 function cleanOptional(value: string | undefined) { const clean = value?.trim(); return clean || null; }
+function normalizeRefundInput(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const body = value as Record<string, unknown>;
+  return {
+    ...body,
+    order_number: body.order_number ?? body.orderNumber,
+    customer_name: body.customer_name ?? body.customerName,
+    payment_method: body.payment_method ?? body.paymentMethod,
+  };
+}
 function isRefundInput(value: unknown): value is RefundInput {
   if (!value || typeof value !== "object") return false;
   const input = value as Partial<RefundInput>;
