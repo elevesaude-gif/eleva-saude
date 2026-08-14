@@ -1,16 +1,21 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { useState } from "react";
+import type { ChangeEvent, FormEvent, InputEvent } from "react";
 import styles from "./page.module.css";
 
-type FormData = { orderNumber: string; customerName: string; cpf: string; paymentMethod: string; reason: string; phone: string; email: string; details: string };
-const initialForm: FormData = { orderNumber: "", customerName: "", cpf: "", paymentMethod: "", reason: "", phone: "", email: "", details: "" };
+type RefundFormData = { orderNumber: string; customerName: string; cpf: string; paymentMethod: string; reason: string; phone: string; email: string; details: string };
+type RefundResponse = { success?: boolean; id?: string; created_at?: string; error?: string; details?: string };
+const initialForm: RefundFormData = { orderNumber: "", customerName: "", cpf: "", paymentMethod: "", reason: "", phone: "", email: "", details: "" };
 
 function maskCpf(value: string) {
   return value.replace(/\D/g, "").slice(0, 11).replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
 function isValidCpf(value: string) {
-  const digits = value.replace(/\D/g, "");
+  const digits = onlyDigits(value);
   if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false;
 
   const calculateDigit = (length: number) => {
@@ -27,60 +32,98 @@ function maskPhone(value: string) {
 }
 
 export function RefundRequestForm() {
-  const [form, setForm] = useState(initialForm);
+  const [formData, setFormData] = useState({
+    orderNumber: "",
+    customerName: "",
+    cpf: "",
+    paymentMethod: "",
+    reason: "",
+    phone: "",
+    email: "",
+    details: "",
+  });
   const [cpfTouched, setCpfTouched] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [error, setError] = useState("");
-  const cpfDigits = form.cpf.replace(/\D/g, "");
-  const cpfValid = useMemo(() => isValidCpf(form.cpf), [form.cpf]);
-  const showCpfError = cpfDigits.length > 0 && !cpfValid && (cpfTouched || cpfDigits.length === 11);
-  const disabledReason = useMemo(() => {
-    if (!form.orderNumber.trim()) return "Informe o número do pedido.";
-    if (!form.customerName.trim()) return "Informe o nome completo.";
-    if (!form.cpf.trim()) return "Informe o CPF.";
-    if (!cpfValid) return "Informe um CPF válido.";
-    if (!form.paymentMethod) return "Selecione a forma de pagamento.";
-    if (!form.reason) return "Selecione o motivo da solicitação.";
-    return "";
-  }, [cpfValid, form]);
-  const isValid = disabledReason === "";
+  const [protocol, setProtocol] = useState("");
+  const cpfDigits = onlyDigits(formData.cpf);
+  const showCpfError = cpfDigits.length > 0 && !isValidCpf(formData.cpf) && (submitAttempted || cpfTouched || cpfDigits.length === 11);
 
-  function update(field: keyof FormData, value: string) {
-    setForm((current) => ({ ...current, [field]: field === "cpf" ? maskCpf(value) : field === "phone" ? maskPhone(value) : value }));
+  function handleChange(event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement> | InputEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
+    const { name, value } = event.currentTarget;
+    const nextValue = name === "cpf" ? maskCpf(value) : name === "phone" ? maskPhone(value) : value;
+    setFormData((current) => ({ ...current, [name]: nextValue }));
     if (status === "error") { setStatus("idle"); setError(""); }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!isValid || status === "sending") return;
+    setSubmitAttempted(true);
+    const currentForm = new FormData(event.currentTarget);
+    const getValue = (name: string) => String(currentForm.get(name) ?? "").trim();
+    const orderNumber = getValue("orderNumber");
+    const customerName = getValue("customerName");
+    const cpf = getValue("cpf");
+    const paymentMethod = getValue("paymentMethod");
+    const reason = getValue("reason");
+
+    if (!orderNumber || !customerName || !cpf || !paymentMethod || !reason) {
+      setStatus("error");
+      setError("Preencha os campos obrigatórios para solicitar a análise.");
+      return;
+    }
+    if (!isValidCpf(cpf)) {
+      setStatus("error");
+      setError("CPF inválido. Confira os números digitados.");
+      return;
+    }
+    if (status === "sending") return;
     setStatus("sending"); setError("");
     try {
-      const response = await fetch("/api/refund-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      if (!response.ok) throw new Error("request_failed");
-      setStatus("success"); setForm(initialForm); setCpfTouched(false);
-    } catch {
-      setStatus("error"); setError("Não foi possível enviar agora. Tente novamente em instantes ou fale com nosso atendimento.");
+      const payload = {
+        order_number: orderNumber,
+        customer_name: customerName,
+        cpf: onlyDigits(cpf),
+        payment_method: paymentMethod,
+        reason,
+        phone: getValue("phone"),
+        email: getValue("email"),
+        details: getValue("details"),
+      };
+      const response = await fetch("/api/refund-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const result = await response.json() as RefundResponse;
+      if (!response.ok || result.success !== true || !result.id) {
+        console.error("[refund-request-form] API recusou a solicitação:", { status: response.status, result });
+        setStatus("error");
+        setError("Não foi possível registrar sua solicitação agora. Tente novamente ou fale com o atendimento.");
+        return;
+      }
+      setProtocol(result.id);
+      setStatus("success"); setFormData(initialForm); setCpfTouched(false); setSubmitAttempted(false);
+    } catch (error) {
+      console.error("[refund-request-form] erro ao enviar solicitação:", error);
+      setStatus("error"); setError("Não foi possível registrar sua solicitação agora. Tente novamente ou fale com o atendimento.");
     }
   }
 
-  if (status === "success") return <div className={styles.success} role="status"><div>✓</div><span>Solicitação registrada</span><h3>Recebemos seus dados.</h3><p>Solicitação recebida. Nossa equipe irá analisar os dados enviados e retornará pelo canal informado.</p><button type="button" onClick={() => setStatus("idle")}>Enviar outra solicitação</button></div>;
+  if (status === "success") return <div className={styles.success} role="status"><div>✓</div><span>Solicitação enviada com sucesso</span><h3>Protocolo: {protocol}</h3><p><strong>Status inicial: Em análise</strong></p><p>Nossa equipe irá verificar os dados enviados e retornará pelo canal informado.</p><button type="button" onClick={() => { setProtocol(""); setStatus("idle"); }}>Enviar outra solicitação</button></div>;
 
   return <form className={styles.form} onSubmit={submit} noValidate>
-    <div className={styles.field}><label htmlFor="orderNumber">Número do pedido <b>*</b></label><input id="orderNumber" value={form.orderNumber} onChange={(e) => update("orderNumber", e.target.value)} required autoComplete="off" placeholder="Ex.: ELV-123456" maxLength={80}/></div>
-    <div className={styles.field}><label htmlFor="customerName">Nome completo <b>*</b></label><input id="customerName" value={form.customerName} onChange={(e) => update("customerName", e.target.value)} required autoComplete="name" placeholder="Digite seu nome completo" maxLength={160}/></div>
+    <div className={styles.field}><label htmlFor="orderNumber">Número do pedido <b>*</b></label><input id="orderNumber" name="orderNumber" value={formData.orderNumber} onChange={handleChange} onInput={handleChange} required autoComplete="off" placeholder="Ex.: ELV-123456" maxLength={80}/></div>
+    <div className={styles.field}><label htmlFor="customerName">Nome completo <b>*</b></label><input id="customerName" name="customerName" value={formData.customerName} onChange={handleChange} onInput={handleChange} required autoComplete="name" placeholder="Digite seu nome completo" maxLength={160}/></div>
     <div className={styles.twoColumns}>
-      <div className={styles.field}><label htmlFor="cpf">CPF <b>*</b></label><input id="cpf" value={form.cpf} onChange={(e) => update("cpf", e.target.value)} onBlur={() => setCpfTouched(true)} required inputMode="numeric" autoComplete="off" placeholder="000.000.000-00" maxLength={14} aria-invalid={showCpfError} aria-describedby={showCpfError ? "cpf-error" : undefined}/>{showCpfError && <p id="cpf-error" className={styles.fieldError} role="alert">CPF inválido. Confira os números digitados.</p>}</div>
-      <div className={styles.field}><label htmlFor="paymentMethod">Forma de pagamento <b>*</b></label><select id="paymentMethod" value={form.paymentMethod} onChange={(e) => update("paymentMethod", e.target.value)} required><option value="">Selecione</option><option>PIX</option><option>Cartão de crédito</option><option>Cartão de débito</option><option>Boleto</option><option>Outro</option></select></div>
+      <div className={styles.field}><label htmlFor="cpf">CPF <b>*</b></label><input id="cpf" name="cpf" value={formData.cpf} onChange={handleChange} onInput={handleChange} onBlur={() => setCpfTouched(true)} required inputMode="numeric" autoComplete="off" placeholder="000.000.000-00" maxLength={14} aria-invalid={showCpfError} aria-describedby={showCpfError ? "cpf-error" : undefined}/>{showCpfError && <p id="cpf-error" className={styles.fieldError} role="alert">CPF inválido. Confira os números digitados.</p>}</div>
+      <div className={styles.field}><label htmlFor="paymentMethod">Forma de pagamento <b>*</b></label><select id="paymentMethod" name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} onInput={handleChange} required><option value="">Selecione</option><option>PIX</option><option>Cartão de crédito</option><option>Cartão de débito</option><option>Boleto</option><option>Outro</option></select></div>
     </div>
-    <div className={styles.field}><label htmlFor="reason">Motivo da solicitação <b>*</b></label><select id="reason" value={form.reason} onChange={(e) => update("reason", e.target.value)} required><option value="">Selecione o motivo</option><option>Produto não recebido</option><option>Extravio no transporte</option><option>Arrependimento</option><option>Cobrança incorreta</option><option>Pedido duplicado</option><option>Outro</option></select></div>
+    <div className={styles.field}><label htmlFor="reason">Motivo da solicitação <b>*</b></label><select id="reason" name="reason" value={formData.reason} onChange={handleChange} onInput={handleChange} required><option value="">Selecione o motivo</option><option>Produto não recebido</option><option>Extravio no transporte</option><option>Arrependimento</option><option>Cobrança incorreta</option><option>Pedido duplicado</option><option>Outro</option></select></div>
     <div className={styles.twoColumns}>
-      <div className={styles.field}><label htmlFor="phone">Telefone <span>(opcional)</span></label><input id="phone" value={form.phone} onChange={(e) => update("phone", e.target.value)} inputMode="tel" autoComplete="tel" placeholder="(00) 00000-0000"/></div>
-      <div className={styles.field}><label htmlFor="email">E-mail <span>(opcional)</span></label><input id="email" value={form.email} onChange={(e) => update("email", e.target.value)} type="email" inputMode="email" autoComplete="email" placeholder="voce@email.com" maxLength={254}/></div>
+      <div className={styles.field}><label htmlFor="phone">Telefone <span>(opcional)</span></label><input id="phone" name="phone" value={formData.phone} onChange={handleChange} onInput={handleChange} inputMode="tel" autoComplete="tel" placeholder="(00) 00000-0000"/></div>
+      <div className={styles.field}><label htmlFor="email">E-mail <span>(opcional)</span></label><input id="email" name="email" value={formData.email} onChange={handleChange} onInput={handleChange} type="email" inputMode="email" autoComplete="email" placeholder="voce@email.com" maxLength={254}/></div>
     </div>
-    <div className={styles.field}><label htmlFor="details">Detalhes <span>(opcional)</span></label><textarea id="details" value={form.details} onChange={(e) => update("details", e.target.value)} placeholder="Conte brevemente o que aconteceu" maxLength={2000} rows={4}/></div>
+    <div className={styles.field}><label htmlFor="details">Detalhes <span>(opcional)</span></label><textarea id="details" name="details" value={formData.details} onChange={handleChange} onInput={handleChange} placeholder="Conte brevemente o que aconteceu" maxLength={2000} rows={4}/></div>
     {error && <p className={styles.formError} role="alert">{error}</p>}
-    {!isValid && <p className={styles.disabledReason} role="status">Para habilitar o envio: {disabledReason}</p>}
-    <button className={styles.submit} disabled={!isValid || status === "sending"} type="submit">{status === "sending" ? "Enviando..." : "Solicitar análise de estorno"}<span aria-hidden="true">→</span></button>
+    <button className={styles.submit} disabled={status === "sending"} type="submit">{status === "sending" ? "Enviando..." : "Solicitar análise de estorno"}<span aria-hidden="true">→</span></button>
     <p className={styles.formFootnote}>Ao enviar, você solicita uma análise. A aprovação não é automática.</p>
   </form>;
 }
