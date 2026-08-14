@@ -1,5 +1,6 @@
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { findOrderByNsu } from "@/lib/orders";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,7 @@ export default async function PaymentSuccessPage({ searchParams }: { searchParam
           {displayedReceiptUrl && <a href={displayedReceiptUrl} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#047857] px-5 py-3.5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(4,120,87,.2)] transition hover:bg-[#065F46]">Ver comprovante <span aria-hidden>↗</span></a>}
 
           <div className="mt-5 rounded-2xl border border-[#C9C6F0] bg-[#C9C6F0]/25 p-4 text-xs leading-5 text-[#344563]">A confirmação pode levar alguns instantes. Você pode retornar a esta página para consultar novamente o status do pedido.</div>
+          <Link href="/rastreio" className="mt-4 flex w-full items-center justify-center rounded-2xl border border-[#047857] px-5 py-3.5 text-sm font-bold text-[#047857] transition hover:bg-[#ECFDF5]">Rastrear meu pedido</Link>
           <p className="mt-6 text-center text-[11px] text-[#344563]">eLeve Saúde · Um caminho mais leve para a sua saúde</p>
         </div>
       </section>
