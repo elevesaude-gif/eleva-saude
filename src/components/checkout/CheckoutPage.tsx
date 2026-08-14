@@ -145,6 +145,9 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
               <span className="absolute -bottom-24 right-28 size-48 rounded-full bg-[#C9C6F0]/15 blur-2xl" />
               <div className="relative flex max-w-2xl flex-col items-start">
                 <BrandLogo negative size="small" className="mb-3" />
+                <a href="#depoimentos" className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-bold text-white backdrop-blur-sm transition hover:border-[#A7F3D0]/60 hover:bg-white/15">
+                  Veja depoimentos de quem já comprou <span aria-hidden>↓</span>
+                </a>
                 <p className="mb-4 text-[10px] font-extrabold uppercase tracking-[.2em] text-[#C9C6F0]">Ambiente privado de fechamento</p>
                 <h1 className="font-serif text-[29px] font-semibold leading-[1.08] tracking-[-.025em] sm:text-[38px]">Escolha sua tirzepatida</h1>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">Conheça as apresentações disponíveis para protocolos individualizados, sempre com prescrição e acompanhamento profissional.</p>
@@ -172,15 +175,16 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
             <MobileCartBar items={items} subtotal={subtotal} onContinue={goToSummary} />
           </>
         ) : (
-          <form id="checkout-form" onSubmit={(event) => event.preventDefault()}>
-            <button type="button" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="mb-5 inline-flex items-center gap-2 rounded-xl px-1 py-2 text-sm font-bold text-[#0D1B2A] hover:bg-[#C9C6F0]">← Voltar ao catálogo</button>
-            <div className="mb-7">
+          <>
+            <form id="checkout-form" onSubmit={(event) => event.preventDefault()}>
+              <button type="button" onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="mb-5 inline-flex items-center gap-2 rounded-xl px-1 py-2 text-sm font-bold text-[#0D1B2A] hover:bg-[#C9C6F0]">← Voltar ao catálogo</button>
+              <div className="mb-7">
               <p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#344563]">Última etapa</p>
               <h1 className="mt-1 font-serif text-3xl font-semibold tracking-[-.03em] text-[#0D1B2A] sm:text-4xl">Resumo do seu pedido</h1>
               <p className="mt-2 text-sm text-[#344563]">Revise os itens orientados no atendimento e complete seus dados.</p>
-            </div>
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_370px]">
-              <div className="space-y-5">
+              </div>
+              <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_370px]">
+                <div className="space-y-5">
                 <section className="checkout-card">
                   <div className="section-heading"><span className="section-icon">◇</span><div><p className="section-kicker">Seu pedido</p><h2 className="section-title">Itens escolhidos</h2><p className="section-description">{itemCount} {itemCount === 1 ? "item escolhido" : "itens escolhidos"} com acompanhamento de {sellers[seller]}.</p></div></div>
                   <div className="divide-y divide-[#E6E8ED]">
@@ -196,9 +200,8 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
                 <CustomerForm data={customer} onChange={setCustomer} />
                 <ShippingOptions options={effectiveShippingOptions} selected={effectiveShippingId} onSelect={setShippingId} loading={shippingLoading} waitingForZip={hasShippableItems && !validPostalCode} error={validPostalCode && quotedPostalCode === postalCode ? shippingError : ""} />
                 <CouponBox seller={seller} subtotal={subtotal} appliedCoupon={appliedCoupon} onApply={setAppliedCoupon} />
-                <WhatsAppTestimonials compact />
-              </div>
-              <aside className="overflow-hidden rounded-[28px] border border-[#E6E8ED] bg-white shadow-[0_18px_55px_rgba(13,27,42,.09)] lg:sticky lg:top-28">
+                </div>
+                <aside className="overflow-hidden rounded-[28px] border border-[#E6E8ED] bg-white shadow-[0_18px_55px_rgba(13,27,42,.09)] lg:sticky lg:top-28">
                 <div className="bg-[#0D1B2A] p-5 text-white">
                   <p className="text-[9px] font-bold uppercase tracking-[.16em] text-[#C9C6F0]">Pagamento seguro</p>
                   <div className="mt-1 flex items-center justify-between"><h2 className="text-xl font-bold">Total do pedido</h2><span className="rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2.5 py-1 text-[10px] font-semibold text-[#047857]">✓ Protegido</span></div>
@@ -220,9 +223,13 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
                   {paymentError && <div role="alert" className="mt-3 rounded-xl border border-[#B42318]/20 bg-[#FEF3F2] px-3 py-2.5 text-xs leading-5 text-[#B42318]">{paymentError}</div>}
                   <div className="mt-4 flex items-center justify-center gap-2 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-3 py-2 text-[10px] font-semibold text-[#047857]">✓ Seus dados estão protegidos</div>
                 </div>
-              </aside>
+                </aside>
+              </div>
+            </form>
+            <div className="mt-8 lg:mt-10">
+              <WhatsAppTestimonials compact />
             </div>
-          </form>
+          </>
         )}
       </main>
       <footer className="border-t border-[#E6E8ED] bg-white px-4 py-8">

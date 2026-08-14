@@ -16,6 +16,7 @@ const testimonials = [
 export function WhatsAppTestimonials({ compact = false }: { compact?: boolean }) {
   return (
     <section
+      id={compact ? "depoimentos-checkout" : "depoimentos"}
       aria-labelledby={compact ? "checkout-testimonials-title" : "testimonials-title"}
       className={compact
         ? "overflow-hidden rounded-[28px] border border-[#DDE8E4] bg-gradient-to-br from-white to-[#ECFDF5]/60 p-5 shadow-[0_12px_40px_rgba(13,27,42,.055)] sm:p-6"
@@ -51,7 +52,7 @@ export function WhatsAppTestimonials({ compact = false }: { compact?: boolean })
         <div
           className={`-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2 sm:-mx-6 sm:px-6 ${
             compact
-              ? "lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0"
+              ? "lg:mx-0 lg:grid lg:grid-cols-5 lg:overflow-visible lg:px-0"
               : "lg:mx-0 lg:grid lg:grid-cols-5 lg:overflow-visible lg:px-0"
           }`}
           aria-label="Galeria de depoimentos de clientes"
