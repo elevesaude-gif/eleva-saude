@@ -1,5 +1,4 @@
-import { categories } from "@/lib/mock-data";
-import type { Category } from "@/types/checkout";
+import { categories, type Category } from "@/types/checkout";
 
 type Props = { active: Category; onChange: (category: Category) => void };
 

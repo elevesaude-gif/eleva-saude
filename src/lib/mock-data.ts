@@ -1,9 +1,7 @@
-import type { Category, Product, ShippingOption } from "@/types/checkout";
+import type { Product, ShippingOption } from "@/types/checkout";
 import { sellers } from "@/lib/sellers";
 
 export { sellers };
-
-export const categories: Category[] = ["Tirzepatida", "Suplementos", "Shopping"];
 
 // TODO(Melhor Envio): medidas provisórias. Revisar antes de ativar cotações reais.
 const provisionalShippingDimensions = {
