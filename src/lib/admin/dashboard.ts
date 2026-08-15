@@ -2,6 +2,16 @@ import "server-only";
 import {getSupabaseServerClient} from "@/lib/supabase/server";
 import {defaultDashboard,type DashboardContent} from "@/lib/dashboard-content";
 
+const preparedProductsBySlug=new Map(defaultDashboard.products.map(product=>[product.slug,product]));
+const legacyCopyPattern=/a definir|composição não informada|não vou atribuir|não vou preencher|sem (?:a )?composição[^,.]*(?:não|impossível)/i;
+const editorialFields=["level","short_summary","pitch","studied_for","research_shows","important_note"] as const;
+
+function replaceLegacyProductCopy<T extends Record<string,unknown>>(product:T){
+ const prepared=preparedProductsBySlug.get(String(product.slug));
+ if(!prepared||!editorialFields.some(field=>legacyCopyPattern.test(String(product[field]??""))))return product;
+ return {...product,...Object.fromEntries(editorialFields.map(field=>[field,prepared[field]]))};
+}
+
 export async function getDashboardContent(includeInactive=false):Promise<DashboardContent>{
  try{
   const db=getSupabaseServerClient();
@@ -12,7 +22,7 @@ export async function getDashboardContent(includeInactive=false):Promise<Dashboa
   const goalRows=(goals.data??[]);const goalById=new Map(goalRows.map(goal=>[goal.id,goal.slug]));
   const goalsByProduct=new Map<string,string[]>();for(const link of links.data??[]){const slug=goalById.get(link.goal_id);if(slug)goalsByProduct.set(link.product_id,[...(goalsByProduct.get(link.product_id)??[]),slug]);}
   const visible=<T extends {active:boolean}>(rows:T[])=>includeInactive?rows:rows.filter(row=>row.active);
-  return {settings:settings.data,goals:visible(goalRows),products:visible((products.data??[]).map(product=>({...product,goal_slugs:goalsByProduct.get(product.id)??[]}))),questions:visible(questions.data??[]),sections:visible(sections.data??[])} as DashboardContent;
+  return {settings:settings.data,goals:visible(goalRows),products:visible((products.data??[]).map(product=>({...replaceLegacyProductCopy(product),goal_slugs:goalsByProduct.get(product.id)??[]}))),questions:visible(questions.data??[]),sections:visible(sections.data??[])} as DashboardContent;
  }catch(error){console.warn("[dashboard] usando conteúdo preparado:",error);return defaultDashboard;}
 }
 
