@@ -4,8 +4,8 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { validateMediaBytes } from "@/lib/media-validation";
 
 const allowed=new Map([["image/jpeg","jpg"],["image/png","png"],["image/webp","webp"]]);
-export async function uploadAdminMedia(file:File,folder:"guide"|"products"){
-  if(folder!=="guide"&&folder!=="products")throw new Error("Pasta inválida.");
+export async function uploadAdminMedia(file:File,folder:"guide"|"products"|"dashboard"){
+  if(folder!=="guide"&&folder!=="products"&&folder!=="dashboard")throw new Error("Pasta inválida.");
   const extension=allowed.get(file.type);if(!extension)throw new Error("Formato inválido. Use JPG, PNG ou WebP.");
   const bytes=new Uint8Array(await file.arrayBuffer());
   validateMediaBytes(bytes,file.type,file.size);
