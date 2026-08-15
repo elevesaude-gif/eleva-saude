@@ -1,6 +1,8 @@
 export type SellerSlug = "isabela" | "caio" | "bruno";
 
-export type Category = "Tirzepatida" | "Suplementos" | "Shopping";
+export const categories = ["Tirzepatida", "Peptídeos Premium", "Suplementos", "Shopping"] as const;
+
+export type Category = (typeof categories)[number];
 
 export type Product = {
   id: string;
