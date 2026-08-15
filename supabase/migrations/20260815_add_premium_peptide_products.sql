@@ -1,0 +1,51 @@
+-- Cadastro idempotente dos 24 produtos da categoria Peptídeos Premium.
+-- A faixa 101–124 preserva a ordem do catálogo de origem sem colidir com os
+-- produtos de Tirzepatida já cadastrados em 1–9.
+insert into public.products (
+  id, slug, name, description, category, price_cents, image_url, image_alt,
+  requires_shipping, weight_grams, height_cm, width_cm, length_cm,
+  insured_value_cents, sort_order, featured, active, deleted_at
+) values
+  ('retatrutida-40mg','retatrutida-40mg','Retatrutida 40mg','Acompanha 1 água bacteriostática de 2mL','Peptídeos Premium',89000,'/products/peptideos-premium/retatrutida-40mg.webp','Retatrutida 40mg',true,300,8,16,22,89000,101,false,true,null),
+  ('retatrutida-40mg-4-ampolas','retatrutida-40mg-4-ampolas','Retatrutida 40mg 4 ampolas','Kit com 4 ampolas de Retatrutida 40mg.','Peptídeos Premium',89000,'/products/peptideos-premium/retatrutida-40mg-4-ampolas.webp','Retatrutida 40mg 4 ampolas',true,300,8,16,22,89000,102,false,true,null),
+  ('retatrutida-80mg','retatrutida-80mg','Retatrutida 80mg','Retatrutida 80mg em 4,8mL.','Peptídeos Premium',95000,'/products/peptideos-premium/retatrutida-80mg.webp','Retatrutida 80mg',true,300,8,16,22,95000,103,false,true,null),
+  ('retatrutida-120mg','retatrutida-120mg','Retatrutida 120mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',110000,'/products/peptideos-premium/retatrutida-120mg.webp','Retatrutida 120mg',true,300,8,16,22,110000,104,false,true,null),
+  ('retatrutida-160mg','retatrutida-160mg','Retatrutida 160mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',130000,'/products/peptideos-premium/retatrutida-160mg.webp','Retatrutida 160mg',true,300,8,16,22,130000,105,false,true,null),
+  ('tesamorelin-10mg','tesamorelin-10mg','Tesamorelin 10mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',69000,'/products/peptideos-premium/tesamorelin-10mg.webp','Tesamorelin 10mg',true,300,8,16,22,69000,106,false,true,null),
+  ('ghk-cu-100mg','ghk-cu-100mg','GHK-CU 100mg','Já diluído em 2mL.','Peptídeos Premium',69000,'/products/peptideos-premium/ghk-cu-100mg.webp','GHK-CU 100mg',true,300,8,16,22,69000,107,false,true,null),
+  ('glow-70mg','glow-70mg','Glow 70mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',89000,'/products/peptideos-premium/glow-70mg.webp','Glow 70mg',true,300,8,16,22,89000,108,false,true,null),
+  ('klow-80mg','klow-80mg','KLOW 80mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',95000,'/products/peptideos-premium/klow-80mg.webp','KLOW 80mg',true,300,8,16,22,95000,109,false,true,null),
+  ('pt-141-10mg','pt-141-10mg','PT-141 10mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',49000,'/products/peptideos-premium/pt-141-10mg.webp','PT-141 10mg',true,300,8,16,22,49000,110,false,true,null),
+  ('cbl-514','cbl-514','CBL-514','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',89000,'/products/peptideos-premium/cbl-514.webp','CBL-514',true,300,8,16,22,89000,111,false,true,null),
+  ('slu-pp-33-5mg','slu-pp-33-5mg','SLU-PP-33 5mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',69000,'/products/peptideos-premium/slu-pp-33-5mg.webp','SLU-PP-33 5mg',true,300,8,16,22,69000,112,false,true,null),
+  ('hgh-frag','hgh-frag','HGH FRAG','Fragmento HGH em apresentação premium.','Peptídeos Premium',69000,'/products/peptideos-premium/hgh-frag.webp','HGH FRAG',true,300,8,16,22,69000,113,false,true,null),
+  ('semax','semax','SEMAX','Apresentação premium de Semax.','Peptídeos Premium',89000,'/products/peptideos-premium/semax.webp','SEMAX',true,300,8,16,22,89000,114,false,true,null),
+  ('aod-5mg','aod-5mg','AOD 5mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',59000,'/products/peptideos-premium/aod-5mg.webp','AOD 5mg',true,300,8,16,22,59000,115,false,true,null),
+  ('cjc-1295-ipamorelin-10mg','cjc-1295-ipamorelin-10mg','CJC 1295 + Ipamorelin 10mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',79000,'/products/peptideos-premium/cjc-1295-ipamorelin-10mg.webp','CJC 1295 + Ipamorelin 10mg',true,300,8,16,22,79000,116,false,true,null),
+  ('ipamorelin-10mg','ipamorelin-10mg','Ipamorelin 10mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',55000,'/products/peptideos-premium/ipamorelin-10mg.webp','Ipamorelin 10mg',true,300,8,16,22,55000,117,false,true,null),
+  ('mots-c-10mg','mots-c-10mg','MOTS-C 10mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',53000,'/products/peptideos-premium/mots-c-10mg.webp','MOTS-C 10mg',true,300,8,16,22,53000,118,false,true,null),
+  ('ss-31-10mg','ss-31-10mg','SS-31 10mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',69000,'/products/peptideos-premium/ss-31-10mg.webp','SS-31 10mg',true,300,8,16,22,69000,119,false,true,null),
+  ('tb-500-bpc-157-20mg','tb-500-bpc-157-20mg','TB-500 + BPC-157 20mg','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',79000,'/products/peptideos-premium/tb-500-bpc-157-20mg.webp','TB-500 + BPC-157 20mg',true,300,8,16,22,79000,120,false,true,null),
+  ('nad-500mg','nad-500mg','NAD+ 500mg','Apresentação premium de NAD+ 500mg.','Peptídeos Premium',85000,'/products/peptideos-premium/nad-500mg.webp','NAD+ 500mg',true,300,8,16,22,85000,121,false,true,null),
+  ('ghk-cu-100mg-po','ghk-cu-100mg-po','GHK-CU 100MG PÓ','Acompanha 1 água bacteriostática de 2mL.','Peptídeos Premium',69000,'/products/peptideos-premium/ghk-cu-100mg-po.webp','GHK-CU 100MG PÓ',true,300,8,16,22,69000,122,false,true,null),
+  ('ghk-cu-50mg','ghk-cu-50mg','GHK-CU 50mg','Já diluído com 1 água bacteriostática.','Peptídeos Premium',49000,'/products/peptideos-premium/ghk-cu-50mg.webp','GHK-CU 50mg',true,300,8,16,22,49000,123,false,true,null),
+  ('ghk-cu-50mg-po-liofilizado','ghk-cu-50mg-po-liofilizado','GHK-CU 50MG PÓ LIOFILIZADO','GHK-CU 50MG PÓ LIOFILIZADO + 2 mL DE ÁGUA BACTERIOSTÁTICA.','Peptídeos Premium',49000,'/products/peptideos-premium/ghk-cu-50mg-po-liofilizado.webp','GHK-CU 50MG PÓ LIOFILIZADO',true,300,8,16,22,49000,124,false,true,null)
+on conflict (id) do update set
+  slug=excluded.slug,
+  name=excluded.name,
+  description=excluded.description,
+  category=excluded.category,
+  price_cents=excluded.price_cents,
+  image_url=excluded.image_url,
+  image_alt=excluded.image_alt,
+  requires_shipping=excluded.requires_shipping,
+  weight_grams=excluded.weight_grams,
+  height_cm=excluded.height_cm,
+  width_cm=excluded.width_cm,
+  length_cm=excluded.length_cm,
+  insured_value_cents=excluded.insured_value_cents,
+  sort_order=excluded.sort_order,
+  featured=excluded.featured,
+  active=excluded.active,
+  deleted_at=excluded.deleted_at,
+  updated_at=now();

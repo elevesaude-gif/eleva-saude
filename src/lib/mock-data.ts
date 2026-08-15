@@ -1,5 +1,6 @@
 import type { Product, ShippingOption } from "@/types/checkout";
 import { sellers } from "@/lib/sellers";
+import { premiumPeptideProducts } from "@/lib/premium-peptide-products";
 
 export { sellers };
 
@@ -34,6 +35,7 @@ export const products: Product[] = [
   { id: "tirzedral", name: "Tirzedral", description: "Para quem busca uma apresentação prática para protocolo de controle de peso e saúde metabólica, com 4 ampolas de 15mg/0,5mL.", price: 950, priceCents: 95000, category: "Tirzepatida", icon: "TD", accent: "#C9C6F0", image: productImagePaths.tirzedral, ...provisionalShippingDimensions, requiresShipping: true },
   { id: "tirzedral-md", name: "Tirzedral MD", description: "Para quem busca tirzepatida em ampola multidose, com 60mg em apresentação única.", price: 950, priceCents: 95000, category: "Tirzepatida", icon: "MD", accent: "#E6E8ED", image: productImagePaths["tirzedral-md"], ...provisionalShippingDimensions, requiresShipping: true },
   { id: "lipoland", name: "Lipoland", description: "Para quem busca controle de peso e saúde metabólica com apresentação multidose de 60mg de tirzepatida em 2mL.", price: 950, priceCents: 95000, category: "Tirzepatida", icon: "LP", accent: "#F7F8FA", image: productImagePaths.lipoland, ...provisionalShippingDimensions, requiresShipping: true },
+  ...premiumPeptideProducts,
 ];
 
 export const internalTestProduct: Product = {
