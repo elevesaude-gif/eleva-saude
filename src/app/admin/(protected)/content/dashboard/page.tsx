@@ -1,3 +1,5 @@
-import {DashboardEditor} from "@/components/admin/DashboardEditor";
-import {getDashboardContent} from "@/lib/admin/dashboard";
-export default async function DashboardAdminPage(){const content=await getDashboardContent(true);return <main className="mx-auto max-w-6xl px-4 py-8"><p className="text-xs font-bold uppercase tracking-widest text-[#047857]">Conteúdo estruturado</p><h1 className="font-serif text-4xl font-semibold">Dashboard de tratamentos</h1><p className="mt-3 text-sm text-[#344563]">Edite o hero, filtros, cards, links de compra, imagens, perguntas e seções adicionais.</p><DashboardEditor initial={content}/></main>}
+import {redirect} from "next/navigation";
+
+export default function DashboardAdminPage(){
+ redirect("/admin/content/guide");
+}

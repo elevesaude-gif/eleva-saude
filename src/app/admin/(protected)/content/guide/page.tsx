@@ -1,3 +1,7 @@
-import { GuideEditor } from "@/components/admin/GuideEditor";
-import { getGuideForAdmin } from "@/lib/admin/content";
-export default async function GuideEditorPage(){let guide=null;let unavailable="";try{guide=await getGuideForAdmin();}catch{unavailable="O conteúdo do guia não pôde ser carregado do Supabase."}const initial=guide??{title:"Guia das Canetas para Emagrecimento",description:"",active:true,sections:[{section_type:"hero" as const,sort_order:0,active:true,content:{eyebrow:"Guia eLeve Saúde",title:"Título",subtitle:"Subtítulo",body:"Parágrafo",imageUrl:"",imageAlt:"",ctaText:"Falar conosco",ctaUrl:"https://wa.me/5511920180233"}}]};return <main className="mx-auto max-w-5xl px-4 py-8"><p className="text-xs font-bold uppercase tracking-widest text-[#047857]">Conteúdo estruturado</p><h1 className="font-serif text-4xl font-semibold">Guia de canetas</h1><p className="mt-3 text-sm text-[#344563]">Editor visual das 13 seções. A visualização JSON avançada é somente leitura; HTML e scripts são rejeitados.</p>{unavailable&&<p className="mt-5 rounded-xl bg-amber-50 p-4 text-amber-900">{unavailable}</p>}<GuideEditor guide={initial} disabled={Boolean(unavailable)}/></main>}
+import {DashboardEditor} from "@/components/admin/DashboardEditor";
+import {getDashboardContent} from "@/lib/admin/dashboard";
+
+export default async function GuideEditorPage(){
+ const content=await getDashboardContent(true);
+ return <main className="mx-auto max-w-6xl px-4 py-8"><p className="text-xs font-bold uppercase tracking-widest text-[#047857]">Conteúdo estruturado</p><h1 className="font-serif text-4xl font-semibold">Guia de tratamentos</h1><p className="mt-3 text-sm text-[#344563]">Edite o mesmo dashboard exibido em /guia-canetas-emagrecimento: introdução, objetivos, produtos, imagens, vínculos, perguntas e seções adicionais.</p><DashboardEditor initial={content}/></main>;
+}

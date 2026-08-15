@@ -15,8 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <nav className="hidden items-center gap-1 md:flex" aria-label="Administração">
             <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin/overview">Visão geral</Link>
             <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin">Pedidos</Link>
-            <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin/content/dashboard">Dashboard</Link>
-            <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin/content/guide">Guia legado</Link>
+            <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin/content/guide">Guia / Dashboard</Link>
             <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin/products">Produtos</Link>
             <Link className="rounded-lg px-3 py-2 text-xs font-bold hover:bg-[#F1F2F5]" href="/admin/cupons">Cupons</Link>
           </nav>
@@ -29,7 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
       <nav className="flex gap-1 overflow-x-auto border-b border-[#E6E8ED] bg-white px-4 py-2 md:hidden" aria-label="Administração">
-        <Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/overview">Visão geral</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin">Pedidos</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/content/dashboard">Dashboard</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/products">Produtos</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/cupons">Cupons</Link>
+        <Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/overview">Visão geral</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin">Pedidos</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/content/guide">Guia / Dashboard</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/products">Produtos</Link><Link className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold" href="/admin/cupons">Cupons</Link>
       </nav>
       {children}
     </div>
