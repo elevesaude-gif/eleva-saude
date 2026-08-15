@@ -150,16 +150,28 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
                 </a>
                 <p className="mb-4 text-[10px] font-extrabold uppercase tracking-[.2em] text-[#C9C6F0]">Ambiente privado de fechamento</p>
                 <h1 className="font-serif text-[29px] font-semibold leading-[1.08] tracking-[-.025em] sm:text-[38px]">Escolha sua tirzepatida</h1>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">Conheça as apresentações disponíveis para protocolos individualizados, sempre com prescrição e acompanhamento profissional.</p>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">Conheça as apresentações disponíveis para protocolos individualizados de forma segura e confiável. Verifique sempre a procedência de quem você está comprando. Sua saúde importa!</p>
                 <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#C9C6F0] px-3 py-2 text-[11px] font-bold text-[#0D1B2A]">
                   <span aria-hidden>✓</span> Atendimento personalizado com {sellers[seller]}
                 </div>
               </div>
             </section>
-            <aside className="mb-6 flex flex-col gap-2 rounded-2xl border border-[#E6E8ED] bg-white px-4 py-3 text-sm text-[#344563] sm:flex-row sm:items-center sm:justify-between">
-              <p>Em dúvida sobre tirzepatida, procedência ou orientação? <span className="font-semibold text-[#0D1B2A]">Leia o guia antes de escolher sua apresentação.</span></p>
-              <Link href="/guia-canetas-emagrecimento" className="shrink-0 font-bold text-[#047857] underline decoration-[#A7F3D0] decoration-2 underline-offset-4 hover:text-[#065F46]">Ler guia</Link>
-            </aside>
+            <div className="mb-7 grid gap-3 lg:grid-cols-2">
+              <aside className="flex flex-col gap-4 rounded-2xl border border-[#C9C6F0] bg-gradient-to-br from-white to-[#F1F0FF] p-5 shadow-[0_10px_30px_rgba(52,69,99,.08)] sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#C9C6F0] text-lg text-[#0D1B2A]">?</span>
+                  <p className="text-sm leading-6 text-[#344563]">Tá com dúvida de qual protocolo comprar? Tire todas suas dúvidas sobre Tirzepatida, procedência e orientação. <span className="font-semibold text-[#0D1B2A]">Leia o guia antes de escolher sua apresentação.</span></p>
+                </div>
+                <Link href="/guia-canetas-emagrecimento" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[#0D1B2A] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_18px_rgba(13,27,42,.18)] transition hover:bg-[#344563] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D1B2A]">Ler Guia <span aria-hidden className="ml-2">→</span></Link>
+              </aside>
+              <aside className="flex flex-col gap-4 rounded-2xl border border-[#A7F3D0] bg-gradient-to-br from-white to-[#ECFDF5] p-5 shadow-[0_10px_30px_rgba(4,120,87,.08)] sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#A7F3D0] text-lg text-[#047857]">✓</span>
+                  <p className="text-sm leading-6 text-[#344563]">Teve problemas com seu pedido? A eLeve te dá 30 dias de garantia e reembolso da sua compra.</p>
+                </div>
+                <Link href="/pedido-protegido" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[#047857] px-5 py-3 text-center text-sm font-bold text-white shadow-[0_8px_18px_rgba(4,120,87,.2)] transition hover:bg-[#065F46] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#047857]">Clique aqui para solicitar o seu estorno! <span aria-hidden className="ml-2">→</span></Link>
+              </aside>
+            </div>
             <div className="mb-6 flex items-end justify-between gap-4">
               <div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#344563]">Recomendados no atendimento</p><h2 className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#0D1B2A]">Itens disponíveis para seu pedido</h2></div>
               <span className="hidden text-xs text-[#344563] sm:block">{availableProducts.length} opções orientadas pela equipe</span>
