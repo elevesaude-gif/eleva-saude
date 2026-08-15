@@ -181,6 +181,16 @@ export function CheckoutPage({ seller, testMode, testToken, products, requestedP
                 <Link href="/pedido-protegido" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[#047857] px-5 py-3 text-center text-sm font-bold text-white shadow-[0_8px_18px_rgba(4,120,87,.2)] transition hover:bg-[#065F46] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#047857]">Clique aqui para solicitar o seu estorno! <span aria-hidden className="ml-2">→</span></Link>
               </aside>
             </div>
+            <aside className="mb-7 flex flex-col gap-4 rounded-2xl border-2 border-[#047857] bg-gradient-to-r from-[#ECFDF5] via-white to-[#ECFDF5] p-5 shadow-[0_12px_34px_rgba(4,120,87,.14)] sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex items-center gap-3">
+                <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#047857] text-xl text-white shadow-[0_7px_16px_rgba(4,120,87,.22)]">⌖</span>
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#047857]">Rastreio do pedido</p>
+                  <p className="mt-1 text-base font-bold leading-6 text-[#0D1B2A]">Acompanhe a entrega do seu pedido</p>
+                </div>
+              </div>
+              <Link href="/rastreio" className="inline-flex min-h-12 w-full shrink-0 items-center justify-center rounded-xl bg-[#047857] px-7 py-3 text-sm font-extrabold text-white shadow-[0_9px_20px_rgba(4,120,87,.24)] transition hover:bg-[#065F46] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#047857] sm:w-auto">Clique Aqui <span aria-hidden className="ml-2">→</span></Link>
+            </aside>
             <div className="mb-6 flex items-end justify-between gap-4">
               <div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#344563]">Recomendados no atendimento</p><h2 className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#0D1B2A]">Itens disponíveis para seu pedido</h2></div>
               <span className="hidden text-xs text-[#344563] sm:block">{availableProducts.length} opções orientadas pela equipe</span>
