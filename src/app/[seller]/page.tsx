@@ -13,7 +13,7 @@ export default async function SellerPage({
   searchParams,
 }: {
   params: Promise<{ seller: string }>;
-  searchParams: Promise<{ teste?: string | string[]; token?: string | string[] }>;
+  searchParams: Promise<{ teste?: string | string[]; token?: string | string[]; product?: string | string[] }>;
 }) {
   const { seller } = await params;
   const query = await searchParams;
@@ -39,5 +39,6 @@ export default async function SellerPage({
   }
 
   const catalog = await listPublicProductsWithFallback();
-  return <CheckoutPage key={testMode ? "test" : "normal"} products={catalog} seller={seller} testMode={testMode} testToken={testMode && typeof query.token === "string" ? query.token : undefined} />;
+  const requestedProductId=typeof query.product==="string"&&catalog.some(product=>product.id===query.product)?query.product:undefined;
+  return <CheckoutPage key={testMode ? "test" : "normal"} products={catalog} seller={seller} testMode={testMode} testToken={testMode && typeof query.token === "string" ? query.token : undefined} requestedProductId={requestedProductId} />;
 }

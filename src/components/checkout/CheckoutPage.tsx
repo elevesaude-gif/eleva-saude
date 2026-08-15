@@ -22,9 +22,10 @@ const emptyCustomer: CustomerData = {
   complement: "", neighborhood: "", city: "", state: "", reference: "",
 };
 
-export function CheckoutPage({ seller, testMode, testToken, products }: { seller: SellerSlug; testMode: boolean; testToken?: string; products: Product[] }) {
+export function CheckoutPage({ seller, testMode, testToken, products, requestedProductId }: { seller: SellerSlug; testMode: boolean; testToken?: string; products: Product[]; requestedProductId?: string }) {
+  const requestedProduct=products.find(product=>product.id===requestedProductId);
   const [step, setStep] = useState<1 | 2>(1);
-  const [category, setCategory] = useState<Category>("Tirzepatida");
+  const [category, setCategory] = useState<Category>(requestedProduct?.category??"Tirzepatida");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [customer, setCustomer] = useState(emptyCustomer);
   const [shippingId, setShippingId] = useState("");
@@ -36,6 +37,14 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const availableProducts = useMemo(() => testMode ? [...products, internalTestProduct] : products, [products, testMode]);
+  const [highlightedProductId,setHighlightedProductId]=useState<string|undefined>(requestedProduct?.id);
+
+  useEffect(()=>{
+    if(!requestedProduct)return;
+    const scrollTimer=window.setTimeout(()=>document.getElementById(`product-${requestedProduct.id}`)?.scrollIntoView({behavior:"smooth",block:"center"}),100);
+    const highlightTimer=window.setTimeout(()=>setHighlightedProductId(undefined),3500);
+    return()=>{window.clearTimeout(scrollTimer);window.clearTimeout(highlightTimer)};
+  },[requestedProduct]);
 
   const items = useMemo(() => availableProducts.filter((product) => quantities[product.id]).map((product) => ({ ...product, quantity: quantities[product.id] })), [availableProducts, quantities]);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -162,7 +171,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
                   <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#C9C6F0] text-lg text-[#0D1B2A]">?</span>
                   <p className="text-sm leading-6 text-[#344563]">Tá com dúvida de qual protocolo comprar? Tire todas suas dúvidas sobre Tirzepatida, procedência e orientação. <span className="font-semibold text-[#0D1B2A]">Leia o guia antes de escolher sua apresentação.</span></p>
                 </div>
-                <Link href="/guia-canetas-emagrecimento" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[#0D1B2A] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_18px_rgba(13,27,42,.18)] transition hover:bg-[#344563] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D1B2A]">Ler Guia <span aria-hidden className="ml-2">→</span></Link>
+                <Link href={`/guia-canetas-emagrecimento?seller=${seller}`} className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[#0D1B2A] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_18px_rgba(13,27,42,.18)] transition hover:bg-[#344563] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D1B2A]">Ler Guia <span aria-hidden className="ml-2">→</span></Link>
               </aside>
               <aside className="flex flex-col gap-4 rounded-2xl border border-[#A7F3D0] bg-gradient-to-br from-white to-[#ECFDF5] p-5 shadow-[0_10px_30px_rgba(4,120,87,.08)] sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
@@ -179,7 +188,7 @@ export function CheckoutPage({ seller, testMode, testToken, products }: { seller
             <CategoryTabs active={category} onChange={setCategory} />
             <div className="mt-7 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {filtered.map((product) => <ProductCard key={product.id} product={product} quantity={quantities[product.id] ?? 0} onAdd={() => setQuantity(product.id, 1)} onRemove={() => setQuantity(product.id, -1)} />)}
+                {filtered.map((product) => <div id={`product-${product.id}`} key={product.id} className={`scroll-mt-28 rounded-[24px] transition duration-500 ${highlightedProductId===product.id?"ring-4 ring-[#047857] ring-offset-4 shadow-[0_0_35px_rgba(4,120,87,.35)]":""}`}><ProductCard product={product} quantity={quantities[product.id] ?? 0} onAdd={() => setQuantity(product.id, 1)} onRemove={() => setQuantity(product.id, -1)} /></div>)}
               </div>
               <CartSummary items={items} subtotal={subtotal} sellerName={sellers[seller]} onAdd={(id) => setQuantity(id, 1)} onRemove={(id) => setQuantity(id, -1)} onContinue={goToSummary} />
             </div>

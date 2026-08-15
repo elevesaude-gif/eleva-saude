@@ -8,7 +8,7 @@ import { connection } from "next/server";
 export type ProductRecord = { id:string; slug:string; name:string; description:string; category:string; price_cents:number; image_url:string|null; image_alt:string; requires_shipping:boolean; weight_grams:number; height_cm:number; width_cm:number; length_cm:number; insured_value_cents:number; stock:number|null; sort_order:number; featured:boolean; active:boolean; deleted_at:string|null; created_at?:string; updated_at?:string };
 
 export function toCheckoutProduct(row: ProductRecord): Product {
-  return { id:row.id, name:row.name, description:row.description, category:row.category as Product["category"], price:row.price_cents/100, priceCents:row.price_cents, image:row.image_url ?? undefined, imageAlt:row.image_alt, icon:row.name.slice(0,2).toUpperCase(), accent:"#F7F8FA", requiresShipping:row.requires_shipping, weightGrams:row.weight_grams, heightCm:Number(row.height_cm), widthCm:Number(row.width_cm), lengthCm:Number(row.length_cm), insuredValueCents:row.insured_value_cents };
+  return { id:row.id, slug:row.slug, name:row.name, description:row.description, category:row.category as Product["category"], price:row.price_cents/100, priceCents:row.price_cents, image:row.image_url ?? undefined, imageAlt:row.image_alt, icon:row.name.slice(0,2).toUpperCase(), accent:"#F7F8FA", requiresShipping:row.requires_shipping, weightGrams:row.weight_grams, heightCm:Number(row.height_cm), widthCm:Number(row.width_cm), lengthCm:Number(row.length_cm), insuredValueCents:row.insured_value_cents };
 }
 
 export async function listPublicProductsWithFallback(): Promise<Product[]> {

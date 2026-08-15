@@ -6,6 +6,7 @@ export type Category = (typeof categories)[number];
 
 export type Product = {
   id: string;
+  slug?: string;
   name: string;
   description: string;
   price: number;
