@@ -149,6 +149,77 @@ export async function recordCheckoutFailure(orderId: string, rawCheckoutPayload:
   if (error) throwSupabaseError(error);
 }
 
+export async function createPaymentAttempt(input: {
+  orderId: string;
+  sellerSlug: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  amountCents: number;
+}) {
+  const { data, error } = await getSupabaseServerClient().from("payment_attempts").insert({
+    order_id: input.orderId,
+    seller_slug: input.sellerSlug,
+    customer_name: input.customerName,
+    customer_email: input.customerEmail,
+    customer_phone: input.customerPhone,
+    amount_cents: input.amountCents,
+    installments: null,
+    provider: "infinitepay",
+    status: "initiated",
+  }).select("id").single();
+  if (error) throwSupabaseError(error);
+  if (!data) throw new Error("Supabase não retornou a tentativa de pagamento inserida.");
+  return data.id as string;
+}
+
+export async function updatePaymentAttempt(input: {
+  attemptId: string;
+  status: "link_created" | "provider_rejected" | "provider_error" | "internal_error" | "paid";
+  providerStatus?: string;
+  providerTransactionId?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}) {
+  const { error } = await getSupabaseServerClient().from("payment_attempts").update({
+    status: input.status,
+    provider_status: input.providerStatus || null,
+    provider_transaction_id: input.providerTransactionId || null,
+    error_code: input.errorCode || null,
+    error_message: input.errorMessage || null,
+    updated_at: new Date().toISOString(),
+  }).eq("id", input.attemptId);
+  if (error) throwSupabaseError(error);
+}
+
+export async function markLatestPaymentAttemptAsPaid(input: {
+  orderId: string;
+  providerTransactionId?: string;
+  providerStatus?: string;
+  installments?: number;
+}) {
+  const supabase = getSupabaseServerClient();
+  const { data, error: findError } = await supabase
+    .from("payment_attempts")
+    .select("id")
+    .eq("order_id", input.orderId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (findError) throwSupabaseError(findError);
+  if (!data) return;
+  const { error } = await supabase.from("payment_attempts").update({
+    status: "paid",
+    provider_status: input.providerStatus || "paid",
+    provider_transaction_id: input.providerTransactionId || null,
+    installments: input.installments || null,
+    error_code: null,
+    error_message: null,
+    updated_at: new Date().toISOString(),
+  }).eq("id", data.id);
+  if (error) throwSupabaseError(error);
+}
+
 export async function findOrderByNsu(orderNsu: string): Promise<OrderRecord | null> {
   const { data, error } = await getSupabaseServerClient()
     .from("orders")

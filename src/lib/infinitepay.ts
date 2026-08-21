@@ -24,11 +24,19 @@ type CreateInfinitePayCheckoutInput = {
   totalCents: number;
 };
 
+export type InfinitePayCheckoutResult = {
+  paymentUrl: string;
+  responseStatus: number;
+  providerStatus?: string;
+  providerTransactionId?: string;
+};
+
 export class InfinitePayError extends Error {
   constructor(
     message: string,
     public readonly status: number,
     public readonly responseBody?: unknown,
+    public readonly code = "infinitepay_error",
   ) {
     super(message);
     this.name = "InfinitePayError";
@@ -40,7 +48,7 @@ export async function createInfinitePayCheckout({
   items,
   customer,
   totalCents,
-}: CreateInfinitePayCheckoutInput): Promise<string> {
+}: CreateInfinitePayCheckoutInput): Promise<InfinitePayCheckoutResult> {
   const appUrl = getAppUrl();
 
   const handle = getInfinitePayHandle();
@@ -89,10 +97,17 @@ export async function createInfinitePayCheckout({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
     });
   } catch (error) {
     debugError("[InfinitePay] erro de fetch", getFetchErrorDetails(error));
-    throw error;
+    const timedOut = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    throw new InfinitePayError(
+      timedOut ? "Timeout ao conectar com a InfinitePay." : "Falha de conexão com a InfinitePay.",
+      502,
+      undefined,
+      timedOut ? "infinitepay_timeout" : "infinitepay_transport_error",
+    );
   }
 
   const responseText = await response.text();
@@ -124,7 +139,12 @@ export async function createInfinitePayCheckout({
     throw new InfinitePayError("URL de pagamento inválida.", 502, data);
   }
 
-  return paymentUrl.toString();
+  return {
+    paymentUrl: paymentUrl.toString(),
+    responseStatus: response.status,
+    providerStatus: readProviderString(data, ["status", "payment_status"]),
+    providerTransactionId: readProviderString(data, ["payment_id", "transaction_id", "transaction_nsu", "id"]),
+  };
 }
 
 export function getInfinitePayHandle(): string {
@@ -153,6 +173,14 @@ function getInfinitePayErrorMessage(value: unknown): string | undefined {
   for (const key of ["message", "error", "detail"]) {
     const candidate = (value as Record<string, unknown>)[key];
     if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+}
+
+function readProviderString(value: unknown, keys: string[]) {
+  if (!value || typeof value !== "object") return undefined;
+  for (const key of keys) {
+    const candidate = (value as Record<string, unknown>)[key];
+    if ((typeof candidate === "string" || typeof candidate === "number") && String(candidate).trim()) return String(candidate).trim();
   }
 }
 

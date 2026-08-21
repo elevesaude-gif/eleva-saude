@@ -1,4 +1,4 @@
-import { findOrderByNsu, markOrderAsPaid, recordPaymentEvent } from "@/lib/orders";
+import { findOrderByNsu, markLatestPaymentAttemptAsPaid, markOrderAsPaid, recordPaymentEvent } from "@/lib/orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +15,7 @@ export async function POST(request: Request) {
     const transactionNsu = readString(body, "transaction_nsu");
     const receiptUrl = safeHttpsUrl(readString(body, "receipt_url"));
     const captureMethod = readString(body, "capture_method");
+    const installments = readInteger(body, ["installments"]);
     const paidAmountCents = readInteger(body, ["amount_cents", "amount", "paid_amount_cents", "paid_amount"]);
     const order = orderNsu ? await findOrderByNsu(orderNsu) : null;
     const event = await recordPaymentEvent({
@@ -38,6 +39,12 @@ export async function POST(request: Request) {
       paidAmountCents,
       paidAt: readIsoDate(body, "paid_at"),
       rawWebhookPayload: payload,
+    });
+    await markLatestPaymentAttemptAsPaid({
+      orderId: order.id,
+      providerTransactionId: transactionNsu,
+      providerStatus: readString(body, "status") || "paid",
+      installments: installments && installments > 0 ? installments : undefined,
     });
     logWebhookProcessed({
       order_nsu: order.order_nsu,

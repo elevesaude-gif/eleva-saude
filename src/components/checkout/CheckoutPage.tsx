@@ -131,8 +131,7 @@ export function CheckoutPage({ seller, testMode, testToken, products, requestedP
         data = { ok: false, error: "non_json_response", message: responseText };
       }
       if (!response.ok || !isPaymentResponse(data)) {
-        const message=data&&typeof data==="object"&&"message" in data&&typeof data.message==="string"?data.message:"Pagamento indisponível.";
-        throw new Error(message);
+        throw new Error(paymentErrorMessage(data));
       }
       if (appliedCoupon) saveCoupons(loadCoupons().map((coupon) => coupon.id === appliedCoupon.id ? { ...coupon, currentUses: coupon.currentUses + 1 } : coupon));
       window.location.assign(data.paymentUrl);
@@ -302,4 +301,14 @@ function isPaymentResponse(value: unknown): value is { ok: true; orderId: string
     typeof value.paymentUrl === "string" &&
     value.paymentUrl.startsWith("https://checkout.infinitepay.io/")
   );
+}
+
+function paymentErrorMessage(value: unknown) {
+  if (!value || typeof value !== "object" || !("error" in value) || typeof value.error !== "string") {
+    return "Não conseguimos processar sua tentativa. Tente novamente ou fale com atendimento.";
+  }
+  if (value.error === "infinitepay_rejected") return "Pagamento não autorizado pela operadora/gateway.";
+  if (value.error === "issuer_declined") return "Pagamento recusado pelo banco emissor.";
+  if (value.error === "validation_error" && "message" in value && typeof value.message === "string") return value.message;
+  return "Não conseguimos processar sua tentativa. Tente novamente ou fale com atendimento.";
 }

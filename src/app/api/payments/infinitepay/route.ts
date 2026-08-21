@@ -6,7 +6,7 @@ import {
 import { isSellerSlug, sellers } from "@/lib/sellers";
 import { getAuthoritativeProductsByIds, InvalidAuthoritativeProductError, ProductValidationUnavailableError } from "@/lib/products";
 import { calculateAuthoritativeSubtotal } from "@/lib/product-validation";
-import { createOrderWithItems, recordCheckoutFailure, updateOrderPaymentUrl } from "@/lib/orders";
+import { createOrderWithItems, createPaymentAttempt, recordCheckoutFailure, updateOrderPaymentUrl, updatePaymentAttempt } from "@/lib/orders";
 import { getShippingQuotes, verifySealedShippingQuote } from "@/lib/shipping";
 import type { CustomerData, SellerSlug } from "@/types/checkout";
 import { initialCoupons, validateCoupon, type Coupon } from "@/lib/coupons";
@@ -27,6 +27,8 @@ type CheckoutRequest = {
 
 export async function POST(request: Request) {
   let savedOrder: { id: string; order_nsu: string } | undefined;
+  let paymentAttemptId: string | undefined;
+  let attemptContext: { seller: string; amountCents: number } | undefined;
   let sanitizedPayload: unknown;
   let stage: "validation" | "supabase" | "infinitepay" = "validation";
 
@@ -75,6 +77,7 @@ export async function POST(request: Request) {
     const discountCents = couponResult?.valid ? Math.round(couponResult.discount * 100) : 0;
     const shippingCents = shipping.priceCents;
     const totalCents = subtotalCents - discountCents + shippingCents;
+    attemptContext = { seller: input.seller, amountCents: totalCents };
 
     debugInfo("3. totais recalculados", { subtotalCents, discountCents, shippingCents, totalCents });
 
@@ -125,11 +128,30 @@ export async function POST(request: Request) {
       if (saveStage === "items_saved") debugInfo("7. itens salvos");
     });
 
+    paymentAttemptId = await createPaymentAttempt({
+      orderId: savedOrder.id,
+      sellerSlug: input.seller,
+      customerName: input.customer.fullName.trim(),
+      customerEmail: input.customer.email.trim().toLowerCase(),
+      customerPhone: input.customer.whatsapp.replace(/\D/g, ""),
+      amountCents: totalCents,
+    }).catch((attemptError) => {
+      logPaymentAttempt("payment_attempt_storage_error", {
+        order_id: savedOrder?.id,
+        order_nsu: savedOrder?.order_nsu,
+        seller: input.seller,
+        amount_cents: totalCents,
+        installments: null,
+        error: safeErrorForLog(attemptError),
+      });
+      return undefined;
+    });
+
     const paymentItems = buildPaymentItems(canonicalLines, discountCents, subtotalCents);
     if (shippingCents > 0) paymentItems.push({ description: `Frete - ${shipping.provider} ${shipping.service}`, quantity: 1, price: shippingCents });
     stage = "infinitepay";
     debugInfo("8. criando checkout InfinitePay");
-    const paymentUrl = await createInfinitePayCheckout({
+    const checkout = await createInfinitePayCheckout({
       orderNsu: savedOrder.order_nsu,
       items: paymentItems,
       customer: {
@@ -146,11 +168,27 @@ export async function POST(request: Request) {
     });
     debugInfo("9. URL de pagamento recebida");
 
+    if (paymentAttemptId) await updatePaymentAttempt({
+      attemptId: paymentAttemptId,
+      status: "link_created",
+      providerStatus: checkout.providerStatus || String(checkout.responseStatus),
+      providerTransactionId: checkout.providerTransactionId,
+    }).catch((attemptError) => debugError("[InfinitePay] falha ao atualizar tentativa", safeErrorForLog(attemptError)));
+    logPaymentAttempt("link_created", {
+      order_id: savedOrder.id,
+      order_nsu: savedOrder.order_nsu,
+      seller: input.seller,
+      amount_cents: totalCents,
+      installments: null,
+      provider_status: checkout.providerStatus || checkout.responseStatus,
+      provider_transaction_id: checkout.providerTransactionId,
+    });
+
     stage = "supabase";
-    await updateOrderPaymentUrl(savedOrder.id, paymentUrl);
+    await updateOrderPaymentUrl(savedOrder.id, checkout.paymentUrl);
     debugInfo("10. payment_url salva no Supabase");
     debugInfo("11. retornando sucesso ao front");
-    return NextResponse.json({ ok: true, orderId: savedOrder.id, orderNsu: savedOrder.order_nsu, paymentUrl });
+    return NextResponse.json({ ok: true, orderId: savedOrder.id, orderNsu: savedOrder.order_nsu, paymentUrl: checkout.paymentUrl });
   } catch (error) {
     if (savedOrder) {
       await recordCheckoutFailure(savedOrder.id, {
@@ -158,6 +196,24 @@ export async function POST(request: Request) {
         checkout_error: safeErrorForStorage(error),
       }).catch((storageError) => debugError("[InfinitePay] falha ao registrar erro", storageError));
     }
+    const failure = classifyPaymentFailure(error, stage);
+    if (paymentAttemptId) await updatePaymentAttempt({
+      attemptId: paymentAttemptId,
+      status: failure.attemptStatus,
+      providerStatus: error instanceof InfinitePayError ? String(error.status) : undefined,
+      errorCode: failure.code,
+      errorMessage: safeErrorMessage(error),
+    }).catch((attemptError) => debugError("[InfinitePay] falha ao atualizar tentativa", safeErrorForLog(attemptError)));
+    logPaymentAttempt(failure.attemptStatus, {
+      order_id: savedOrder?.id,
+      order_nsu: savedOrder?.order_nsu,
+      seller: attemptContext?.seller,
+      amount_cents: attemptContext?.amountCents,
+      installments: null,
+      provider_status: error instanceof InfinitePayError ? error.status : undefined,
+      error_code: failure.code,
+      error_message: safeErrorMessage(error),
+    });
     if (error instanceof InvalidCheckoutError) {
       return errorResponse("validation_error", error.message, 400, error);
     }
@@ -166,8 +222,8 @@ export async function POST(request: Request) {
     debugError("[InfinitePay] falha ao criar checkout", safeErrorForLog(error));
     if (error instanceof InfinitePayError || stage === "infinitepay") {
       return errorResponse(
-        "infinitepay_error",
-        "A InfinitePay não conseguiu criar o pagamento.",
+        failure.code,
+        failure.message,
         error instanceof InfinitePayError ? normalizeHttpStatus(error.status) : 502,
         error,
       );
@@ -250,7 +306,7 @@ function safeErrorForLog(error: unknown) {
   return { name: "UnknownError" };
 }
 
-type CheckoutErrorCode = "supabase_error" | "infinitepay_error" | "validation_error" | "internal_checkout_error" | "product_validation_unavailable";
+type CheckoutErrorCode = "supabase_error" | "infinitepay_error" | "infinitepay_rejected" | "infinitepay_timeout" | "infinitepay_transport_error" | "validation_error" | "internal_checkout_error" | "product_validation_unavailable";
 
 function errorResponse(code: CheckoutErrorCode, message: string, status: number, error?: unknown) {
   return NextResponse.json({
@@ -303,6 +359,29 @@ function normalizePhone(value: string) { const digits = value.replace(/\D/g, "")
 function maskEmail(value: string) { const [local, domain] = value.split("@"); return domain ? `${local.slice(0, 2)}***@${domain}` : "***"; }
 function maskValue(value: string, visibleEnd: number) { return value.length > visibleEnd ? `${"*".repeat(Math.min(6, value.length - visibleEnd))}${value.slice(-visibleEnd)}` : "***"; }
 function normalizeHttpStatus(status: number) { return Number.isInteger(status) && status >= 400 && status <= 599 ? status : 502; }
+function classifyPaymentFailure(error: unknown, stage: "validation" | "supabase" | "infinitepay") {
+  if (error instanceof InfinitePayError) {
+    if (error.code === "infinitepay_timeout" || error.code === "infinitepay_transport_error") return {
+      attemptStatus: "provider_error" as const,
+      code: error.code as "infinitepay_timeout" | "infinitepay_transport_error",
+      message: "Não conseguimos processar sua tentativa. Tente novamente ou fale com atendimento.",
+    };
+    if (error.status >= 400 && error.status < 500) return {
+      attemptStatus: "provider_rejected" as const,
+      code: "infinitepay_rejected" as const,
+      message: "Pagamento não autorizado pela operadora/gateway.",
+    };
+    return { attemptStatus: "provider_error" as const, code: "infinitepay_error" as const, message: "Não conseguimos processar sua tentativa. Tente novamente ou fale com atendimento." };
+  }
+  return { attemptStatus: "internal_error" as const, code: stage === "supabase" ? "supabase_error" as const : "internal_checkout_error" as const, message: "Não conseguimos processar sua tentativa. Tente novamente ou fale com atendimento." };
+}
+function safeErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.slice(0, 500);
+}
+function logPaymentAttempt(event: string, details: Record<string, unknown>) {
+  console.info("[Payment attempt]", { event, provider: "infinitepay", timestamp: new Date().toISOString(), ...details });
+}
 function debugInfo(message: string, details?: unknown) { if (process.env.INFINITEPAY_DEBUG === "true") console.info(message, details ?? ""); }
 function debugError(message: string, details: unknown) { if (process.env.INFINITEPAY_DEBUG === "true") console.error(message, details); }
 class InvalidCheckoutError extends Error {}
