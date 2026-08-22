@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:security": "node --experimental-strip-types scripts/security-checks.mjs",
+    "test:infinitepay-payload": "node --experimental-strip-types --test tests/infinitepay-payload.test.ts",
     "verify:guide-persistence": "node --env-file=.env.local scripts/verify-guide-persistence.mjs",
     "audit:encoding": "node scripts/audit-encoding.mjs",
     "test:cms-roundtrip": "node --env-file=.env.local scripts/test-cms-roundtrip.mjs"

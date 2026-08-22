@@ -1,4 +1,5 @@
 const INFINITEPAY_LINKS_ENDPOINT = "https://api.checkout.infinitepay.io/links";
+export const INFINITEPAY_FISCAL_PRODUCT_DESCRIPTION = "Suplemento T";
 
 export type InfinitePayItem = {
   quantity: number;
@@ -31,15 +32,30 @@ export type InfinitePayCheckoutResult = {
   providerTransactionId?: string;
 };
 
+export function buildInfinitePayFiscalItems(items: InfinitePayItem[]): InfinitePayItem[] {
+  return items.map((item) => ({
+    quantity: item.quantity,
+    price: item.price,
+    description: INFINITEPAY_FISCAL_PRODUCT_DESCRIPTION,
+  }));
+}
+
 export class InfinitePayError extends Error {
+  readonly status: number;
+  readonly responseBody?: unknown;
+  readonly code: string;
+
   constructor(
     message: string,
-    public readonly status: number,
-    public readonly responseBody?: unknown,
-    public readonly code = "infinitepay_error",
+    status: number,
+    responseBody?: unknown,
+    code = "infinitepay_error",
   ) {
     super(message);
     this.name = "InfinitePayError";
+    this.status = status;
+    this.responseBody = responseBody;
+    this.code = code;
   }
 }
 
@@ -64,6 +80,7 @@ export async function createInfinitePayCheckout({
 
   const redirectUrl = `${appUrl}/pedido/sucesso`;
   const webhookUrl = `${appUrl}/api/webhooks/infinitepay`;
+  const fiscalItems = buildInfinitePayFiscalItems(items);
   const payload = {
     handle,
     order_nsu: orderNsu,
@@ -76,7 +93,7 @@ export async function createInfinitePayCheckout({
       number: customer.address.number,
       ...(customer.address.complement ? { complement: customer.address.complement } : {}),
     } } : {}),
-    items,
+    items: fiscalItems,
     redirect_url: redirectUrl,
     webhook_url: webhookUrl,
   };
@@ -88,6 +105,7 @@ export async function createInfinitePayCheckout({
     webhook_url: webhookUrl,
     item_count: items.length,
     total_cents: totalCents,
+    fiscal_description: INFINITEPAY_FISCAL_PRODUCT_DESCRIPTION,
   });
 
   let response: Response;
@@ -117,6 +135,7 @@ export async function createInfinitePayCheckout({
     response_status: response.status,
     item_count: items.length,
     total_cents: totalCents,
+    fiscal_description: INFINITEPAY_FISCAL_PRODUCT_DESCRIPTION,
     webhook_url_present: payload.webhook_url ? "sim" : "não",
   });
   debugInfo("[InfinitePay] resposta recebida", { status: response.status });
@@ -227,6 +246,7 @@ function logCheckoutResult(details: {
   response_status: number;
   item_count: number;
   total_cents: number;
+  fiscal_description: typeof INFINITEPAY_FISCAL_PRODUCT_DESCRIPTION;
   webhook_url_present: "sim" | "não";
 }) {
   console.info("[InfinitePay] checkout", details);
