@@ -49,8 +49,6 @@ export function CheckoutPage({ seller, testMode, testToken, products, requestedP
   const items = useMemo(() => availableProducts.filter((product) => quantities[product.id]).map((product) => ({ ...product, quantity: quantities[product.id] })), [availableProducts, quantities]);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const couponResult = appliedCoupon ? validateCoupon([appliedCoupon], appliedCoupon.code, seller, subtotal) : null;
-  const discount = couponResult?.valid ? couponResult.discount : 0;
   const filtered = useMemo(() => availableProducts.filter((product) => product.category === category), [availableProducts, category]);
   const setQuantity = (id: string, delta: number) => setQuantities((current) => ({ ...current, [id]: Math.max(0, (current[id] ?? 0) + delta) }));
   const goToSummary = () => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -64,7 +62,11 @@ export function CheckoutPage({ seller, testMode, testToken, products, requestedP
   const effectiveShippingId = !hasShippableItems ? noShippingOption.id : shippingId;
   const shipping = effectiveShippingOptions.find((option) => option.id === effectiveShippingId);
   const shippingLoading = hasShippableItems && validPostalCode && (isShippingLoading || quotedPostalCode !== postalCode);
-  const total = subtotal - discount + (shipping?.priceCents ?? 0) / 100;
+  const shippingAmount = (shipping?.priceCents ?? 0) / 100;
+  const couponResult = appliedCoupon ? validateCoupon([appliedCoupon], appliedCoupon.code, seller, subtotal, shippingAmount) : null;
+  const productDiscount = couponResult?.valid ? couponResult.productDiscount : 0;
+  const shippingDiscount = couponResult?.valid ? couponResult.shippingDiscount : 0;
+  const total = Math.max(0, subtotal - productDiscount + shippingAmount - shippingDiscount);
 
   useEffect(() => {
     if (!items.length || !hasShippableItems || !validPostalCode) return;
@@ -240,8 +242,9 @@ export function CheckoutPage({ seller, testMode, testToken, products, requestedP
                 <div className="p-5">
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between"><span className="text-[#344563]">Itens ({itemCount})</span><span className="font-semibold">{formatCurrency(subtotal)}</span></div>
-                    {couponResult?.valid && appliedCoupon && <div className="flex justify-between rounded-lg bg-[#C9C6F0]/40 px-2 py-1.5 text-[#0D1B2A]"><span>Desconto de {couponDiscountLabel(appliedCoupon)}</span><strong>− {formatCurrency(discount)}</strong></div>}
+                    {couponResult?.valid && appliedCoupon && productDiscount > 0 && <div className="flex justify-between rounded-lg bg-[#C9C6F0]/40 px-2 py-1.5 text-[#0D1B2A]"><span>Desconto de {couponDiscountLabel(appliedCoupon)}</span><strong>− {formatCurrency(productDiscount)}</strong></div>}
                     <div className="flex justify-between"><span className="text-[#344563]">Frete</span><span className="font-semibold">{shipping ? formatCurrency(shipping.priceCents / 100) : "A calcular"}</span></div>
+                    {couponResult?.valid && shippingDiscount > 0 && <div className="flex justify-between rounded-lg bg-[#ECFDF5] px-2 py-1.5 text-[#047857]"><span>Cupom frete grátis</span><strong>− {formatCurrency(shippingDiscount)}</strong></div>}
                     {shipping && <div className="rounded-xl bg-[#F7F8FA] p-3 text-xs text-[#344563]"><strong className="block text-[#0D1B2A]">{shipping.provider} · {shipping.service}</strong><span>{shipping.deliveryTime}</span></div>}
                   </div>
                   <div className="my-5 h-px bg-[#E6E8ED]" />

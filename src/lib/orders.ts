@@ -141,6 +141,15 @@ export async function updateOrderPaymentUrl(orderId: string, paymentUrl: string)
   if (error) throwSupabaseError(error);
 }
 
+export async function countOrdersByCouponCode(couponCode: string) {
+  const { count, error } = await getSupabaseServerClient()
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .ilike("coupon_code", couponCode.trim());
+  if (error) throwSupabaseError(error);
+  return count ?? 0;
+}
+
 export async function recordCheckoutFailure(orderId: string, rawCheckoutPayload: unknown) {
   const { error } = await getSupabaseServerClient()
     .from("orders")

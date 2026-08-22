@@ -1,15 +1,16 @@
 import type { SellerSlug } from "@/types/checkout";
 
 export type CouponSeller = SellerSlug | "todos";
-export type DiscountType = "percentual" | "fixo";
+export type DiscountType = "percentual" | "fixo" | "frete_gratis";
 export type Coupon = { id: string; code: string; seller: CouponSeller; discountType: DiscountType; discountValue: number; minimumPurchase: number; maximumUses: number; currentUses: number; startsAt: string; expiresAt: string; active: boolean };
-export type CouponValidation = { valid: true; coupon: Coupon; discount: number; message: string } | { valid: false; message: string };
+export type CouponValidation = { valid: true; coupon: Coupon; discount: number; productDiscount: number; shippingDiscount: number; message: string } | { valid: false; message: string };
 
 export const COUPONS_STORAGE_KEY = "eleva-saude:coupons:v1";
 export const initialCoupons: Coupon[] = [
   { id: "isabela-10", code: "ISABELA10", seller: "isabela", discountType: "percentual", discountValue: 10, minimumPurchase: 0, maximumUses: 1000, currentUses: 0, startsAt: "2025-01-01", expiresAt: "2030-12-31", active: true },
   { id: "caio-10", code: "CAIO10", seller: "caio", discountType: "percentual", discountValue: 10, minimumPurchase: 0, maximumUses: 1000, currentUses: 0, startsAt: "2025-01-01", expiresAt: "2030-12-31", active: true },
   { id: "bruno-10", code: "BRUNO10", seller: "bruno", discountType: "percentual", discountValue: 10, minimumPurchase: 0, maximumUses: 1000, currentUses: 0, startsAt: "2025-01-01", expiresAt: "2030-12-31", active: true },
+  { id: "teste-frete-5", code: "TESTEFRETE5", seller: "todos", discountType: "frete_gratis", discountValue: 0, minimumPurchase: 0, maximumUses: 1, currentUses: 0, startsAt: "2026-08-22", expiresAt: "2026-08-24", active: true },
 ];
 
 export function normalizeCouponCode(code: string) { return code.trim().toUpperCase(); }
@@ -36,7 +37,7 @@ export function saveCoupons(coupons: Coupon[]): boolean {
   } catch { return false; }
 }
 
-export function validateCoupon(coupons: Coupon[], code: string, seller: SellerSlug, subtotal: number, now = new Date()): CouponValidation {
+export function validateCoupon(coupons: Coupon[], code: string, seller: SellerSlug, subtotal: number, shipping = 0, now = new Date()): CouponValidation {
   const coupon = coupons.find((item) => normalizeCouponCode(item.code) === normalizeCouponCode(code));
   if (!coupon) return { valid: false, message: "Não encontramos esse cupom. Confira o código e tente novamente." };
   if (!coupon.active) return { valid: false, message: "Este cupom está inativo no momento." };
@@ -46,15 +47,17 @@ export function validateCoupon(coupons: Coupon[], code: string, seller: SellerSl
   if (today > coupon.expiresAt) return { valid: false, message: "Este cupom expirou. Solicite outro código ao seu vendedor." };
   if (coupon.maximumUses > 0 && coupon.currentUses >= coupon.maximumUses) return { valid: false, message: "Este cupom atingiu o limite máximo de usos." };
   if (subtotal < coupon.minimumPurchase) return { valid: false, message: `Este cupom é válido para compras a partir de ${formatMoney(coupon.minimumPurchase)}.` };
-  const rawDiscount = coupon.discountType === "percentual" ? subtotal * coupon.discountValue / 100 : coupon.discountValue;
-  const discount = Math.min(subtotal, Math.max(0, rawDiscount));
-  return { valid: true, coupon, discount, message: `Cupom aplicado! Você economizou ${formatMoney(discount)}.` };
+  const rawProductDiscount = coupon.discountType === "percentual" ? subtotal * coupon.discountValue / 100 : coupon.discountType === "fixo" ? coupon.discountValue : 0;
+  const productDiscount = Math.min(subtotal, Math.max(0, rawProductDiscount));
+  const shippingDiscount = coupon.discountType === "frete_gratis" ? Math.max(0, shipping) : 0;
+  const discount = productDiscount + shippingDiscount;
+  return { valid: true, coupon, discount, productDiscount, shippingDiscount, message: `Cupom aplicado! Você economizou ${formatMoney(discount)}.` };
 }
-export function couponDiscountLabel(coupon: Coupon) { return coupon.discountType === "percentual" ? `${coupon.discountValue}%` : formatMoney(coupon.discountValue); }
+export function couponDiscountLabel(coupon: Coupon) { return coupon.discountType === "frete_gratis" ? "Frete grátis" : coupon.discountType === "percentual" ? `${coupon.discountValue}%` : formatMoney(coupon.discountValue); }
 function toLocalDate(date: Date) { const offset = date.getTimezoneOffset() * 60_000; return new Date(date.getTime() - offset).toISOString().slice(0, 10); }
 function formatMoney(value: number) { return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 function isCoupon(value: unknown): value is Coupon {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<Coupon>;
-  return typeof item.id === "string" && typeof item.code === "string" && ["isabela", "caio", "bruno", "todos"].includes(item.seller ?? "") && ["percentual", "fixo"].includes(item.discountType ?? "") && typeof item.discountValue === "number" && typeof item.minimumPurchase === "number" && typeof item.maximumUses === "number" && typeof item.currentUses === "number" && typeof item.startsAt === "string" && typeof item.expiresAt === "string" && typeof item.active === "boolean";
+  return typeof item.id === "string" && typeof item.code === "string" && ["isabela", "caio", "bruno", "todos"].includes(item.seller ?? "") && ["percentual", "fixo", "frete_gratis"].includes(item.discountType ?? "") && typeof item.discountValue === "number" && typeof item.minimumPurchase === "number" && typeof item.maximumUses === "number" && typeof item.currentUses === "number" && typeof item.startsAt === "string" && typeof item.expiresAt === "string" && typeof item.active === "boolean";
 }

@@ -6,7 +6,7 @@ import {
 import { isSellerSlug, sellers } from "@/lib/sellers";
 import { getAuthoritativeProductsByIds, InvalidAuthoritativeProductError, ProductValidationUnavailableError } from "@/lib/products";
 import { calculateAuthoritativeSubtotal } from "@/lib/product-validation";
-import { createOrderWithItems, createPaymentAttempt, recordCheckoutFailure, updateOrderPaymentUrl, updatePaymentAttempt } from "@/lib/orders";
+import { countOrdersByCouponCode, createOrderWithItems, createPaymentAttempt, recordCheckoutFailure, updateOrderPaymentUrl, updatePaymentAttempt } from "@/lib/orders";
 import { getShippingQuotes, verifySealedShippingQuote } from "@/lib/shipping";
 import type { CustomerData, SellerSlug } from "@/types/checkout";
 import { initialCoupons, validateCoupon, type Coupon } from "@/lib/coupons";
@@ -71,12 +71,18 @@ export async function POST(request: Request) {
     if (!shipping || shipping.id !== input.shippingId || (shipping.source === "melhor_envio" && (!sealedShipping || sealedShipping.id !== shipping.id || sealedShipping.priceCents !== shipping.priceCents))) throw new InvalidCheckoutError("Frete inválido.");
 
     const normalizedCoupon = input.couponCode?.trim().toUpperCase();
-    const couponDefinition = input.coupon ?? initialCoupons.find((coupon) => coupon.code === normalizedCoupon);
-    const couponResult = normalizedCoupon && couponDefinition ? validateCoupon([couponDefinition], normalizedCoupon, input.seller, subtotalCents / 100) : null;
+    const trustedCoupon = initialCoupons.find((coupon) => coupon.code === normalizedCoupon);
+    const couponDefinition = trustedCoupon ?? input.coupon;
+    const couponUses = normalizedCoupon && couponDefinition && couponDefinition.maximumUses > 0 ? await countOrdersByCouponCode(normalizedCoupon) : 0;
+    const authoritativeCoupon = couponDefinition ? { ...couponDefinition, currentUses: Math.max(couponDefinition.currentUses, couponUses) } : undefined;
+    const couponResult = normalizedCoupon && authoritativeCoupon ? validateCoupon([authoritativeCoupon], normalizedCoupon, input.seller, subtotalCents / 100, shipping.priceCents / 100) : null;
+    if (normalizedCoupon && (!couponResult || !couponResult.valid)) throw new InvalidCheckoutError(couponResult?.message ?? "Cupom inválido.");
     const couponIsValid = couponResult?.valid === true;
-    const discountCents = couponResult?.valid ? Math.round(couponResult.discount * 100) : 0;
+    const productDiscountCents = couponResult?.valid ? Math.round(couponResult.productDiscount * 100) : 0;
+    const shippingDiscountCents = couponResult?.valid ? Math.round(couponResult.shippingDiscount * 100) : 0;
+    const discountCents = productDiscountCents + shippingDiscountCents;
     const shippingCents = shipping.priceCents;
-    const totalCents = subtotalCents - discountCents + shippingCents;
+    const totalCents = Math.max(0, subtotalCents - productDiscountCents + shippingCents - shippingDiscountCents);
     attemptContext = { seller: input.seller, amountCents: totalCents };
 
     debugInfo("3. totais recalculados", { subtotalCents, discountCents, shippingCents, totalCents });
@@ -147,8 +153,9 @@ export async function POST(request: Request) {
       return undefined;
     });
 
-    const paymentItems = buildPaymentItems(canonicalLines, discountCents, subtotalCents);
-    if (shippingCents > 0) paymentItems.push({ description: `Frete - ${shipping.provider} ${shipping.service}`, quantity: 1, price: shippingCents });
+    const paymentItems = buildPaymentItems(canonicalLines, productDiscountCents, subtotalCents);
+    const payableShippingCents = Math.max(0, shippingCents - shippingDiscountCents);
+    if (payableShippingCents > 0) paymentItems.push({ description: `Frete - ${shipping.provider} ${shipping.service}`, quantity: 1, price: payableShippingCents });
     stage = "infinitepay";
     debugInfo("8. criando checkout InfinitePay");
     const checkout = await createInfinitePayCheckout({
@@ -269,7 +276,7 @@ function isCouponPayload(value: unknown): value is Coupon {
   if (!value || typeof value !== "object") return false;
   const coupon = value as Partial<Coupon>;
   return Object.keys(value).every((key) => ["id","code","seller","discountType","discountValue","minimumPurchase","maximumUses","currentUses","startsAt","expiresAt","active"].includes(key)) &&
-    typeof coupon.id === "string" && typeof coupon.code === "string" && ["isabela","caio","bruno","todos"].includes(coupon.seller ?? "") && ["percentual","fixo"].includes(coupon.discountType ?? "") &&
+    typeof coupon.id === "string" && typeof coupon.code === "string" && ["isabela","caio","bruno","todos"].includes(coupon.seller ?? "") && ["percentual","fixo","frete_gratis"].includes(coupon.discountType ?? "") &&
     [coupon.discountValue,coupon.minimumPurchase,coupon.maximumUses,coupon.currentUses].every((number) => typeof number === "number" && Number.isFinite(number) && number >= 0) &&
     typeof coupon.startsAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(coupon.startsAt) && typeof coupon.expiresAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(coupon.expiresAt) && typeof coupon.active === "boolean";
 }
